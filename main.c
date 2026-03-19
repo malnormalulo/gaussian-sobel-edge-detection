@@ -38,6 +38,23 @@ void fill_kernel(int size, float kernel[size][size]) {
             kernel[i][j] /= sum;
 }
 
+void gaussian_blur_naive (int height, int width,
+    float input[height][width], float output[height][width],
+    int kernel_size, float kernel[kernel_size][kernel_size]) {
+    const int radius = kernel_size / 2;
+
+    for (int i = 0; i < height; i++)
+        for (int j = 0; j < width; j++) {
+            float cell_sum = 0.f;
+            for (int ki = -radius; ki < radius + 1; ki++)
+                for (int kj = -radius; kj < radius + 1; kj++) {
+                    if (i + ki >= 0 && i + ki < height && j + kj >= 0 && j + kj < width)
+                        cell_sum += input[i + ki][j + kj] * kernel[ki + radius][kj + radius];
+                }
+            output[i][j] = cell_sum;
+        }
+}
+
 int main() {
     printf("Hello and welcome to Gaussian Blur!\n");
     printf("KERNEL_SIZE = %d\n", KERNEL_SIZE);
@@ -65,17 +82,8 @@ int main() {
     printf("Kernel:\n");
     print_2D_array(KERNEL_SIZE, KERNEL_SIZE, kernel);
 
-    const int radius = KERNEL_SIZE / 2;
-    for (int i = 0; i < HEIGHT; i++)
-        for (int j = 0; j < WIDTH; j++) {
-            float cell_sum = 0.f;
-            for (int ki = -radius; ki < radius + 1; ki++)
-                for (int kj = -radius; kj < radius + 1; kj++) {
-                    if (i + ki >= 0 && i + ki < HEIGHT && j + kj >= 0 && j + kj < WIDTH)
-                        cell_sum += image[i + ki][j + kj] * kernel[ki + radius][kj + radius];
-                }
-            output_image[i][j] = cell_sum;
-        }
+    gaussian_blur_naive(HEIGHT, WIDTH, image, output_image,
+        KERNEL_SIZE, kernel);
 
     printf("\n\nOutput image:\n");
     print_2D_array(HEIGHT, WIDTH, output_image);
