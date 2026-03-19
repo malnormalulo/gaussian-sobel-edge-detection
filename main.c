@@ -7,6 +7,21 @@
 #define HEIGHT 10
 #define WIDTH 10
 
+float image[HEIGHT][WIDTH] = {
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
+    {50, 50, 50, 50, 50, 100, 100, 100, 100, 100}
+};
+
+float output_image[HEIGHT][WIDTH] = {};
+
 void print_2D_array(int height, int width, float array[height][width]) {
     for (int i=0; i<height; i++) {
         printf("[");
@@ -56,36 +71,23 @@ void gaussian_blur_naive (int height, int width,
 }
 
 int main() {
-    printf("Hello and welcome to Gaussian Blur!\n");
-    printf("KERNEL_SIZE = %d\n", KERNEL_SIZE);
+    printf("Hello and welcome to Gaussian Blur & Sobel Edge Detection!\n");
+    printf("Gaussian Blur KERNEL_SIZE = %d\n", KERNEL_SIZE);
 
-    float image[HEIGHT][WIDTH] = {
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100},
-        {50, 50, 50, 50, 50, 100, 100, 100, 100, 100}
-    };
+    //TODO: load image, preprocess to make monochrome
 
-    float output_image[HEIGHT][WIDTH] = {};
-
-    printf("Input image:\n");
+    printf("Gaussian Blur input image:\n");
     print_2D_array(HEIGHT, WIDTH, image);
 
     float kernel[KERNEL_SIZE][KERNEL_SIZE] = {};
     fill_kernel(KERNEL_SIZE, kernel);
-    printf("Kernel:\n");
+    printf("Gaussian Blur kernel:\n");
     print_2D_array(KERNEL_SIZE, KERNEL_SIZE, kernel);
 
     gaussian_blur_naive(HEIGHT, WIDTH, image, output_image,
         KERNEL_SIZE, kernel);
 
-    printf("\n\nOutput image:\n");
+    printf("\n\nGaussian Blur output / Sobel Edge Detection input image:\n");
     print_2D_array(HEIGHT, WIDTH, output_image);
 
     return 0;
