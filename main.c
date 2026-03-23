@@ -24,7 +24,7 @@ int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     { 1,  2,  1}
 };
 
-
+// Utills
 void print_2D_float_array(const int height, const int width, float array[height][width]) {
     for (int i=0; i<height; i++) {
         printf("[");
@@ -45,12 +45,14 @@ void print_uint8_t_array(const int height, const int width, const uint8_t * arra
     }
 }
 
-void convert_to_monochrome(const int size, uint8_t in_image[size][3], uint8_t out_image[size]) {
+
+// Core logic
+void convert_to_monochrome_naive(const int size, uint8_t in_image[size][3], uint8_t out_image[size]) {
     for (int i = 0; i < size; i++)
         out_image[i] = (uint8_t)(0.3f * in_image[i][0] + 0.59f * in_image[i][1] + 0.11f * in_image[i][2]);
 }
 
-void fill_gaussian_blur_kernel(int size, float kernel[size][size]) {
+void fill_gaussian_blur_kernel_naive(int size, float kernel[size][size]) {
     const int r = GBLUR_KERNEL_SIZE / 2;  // radius
     float sum = 0.f;
 
@@ -92,9 +94,11 @@ void gaussian_blur_naive(const int height, const int width,
         }
 }
 
+
+
 int main() {
-    printf("Hello and welcome to Gaussian Blur & Sobel Edge Detection!\n");
-    printf("Loading image...\n");
+    printf("Welcome to Gaussian Blur & Sobel Edge Detection!\n");
+    printf("\nLoading image...\n");
 
     FILE *fIn = fopen("input.bmp","rb"); // Input file
     FILE *fOut = fopen("output.bmp","w+b"); // Output file
@@ -113,21 +117,21 @@ int main() {
     const int width = *(int*)&header[18];
     const int height = *(int*)&header[22];
 
-    printf("width: %d\n", width);
-    printf("height: %d\n", height);
-
     const int size = height * width;
     uint8_t (*original_image)[3] = malloc(size * 3 * sizeof(uint8_t));
 
     fread(original_image, sizeof(uint8_t), size * 3, fIn);
 
     fclose(fIn);
-    printf("Loading complete\n");
+    printf("Loading completed\n");
 
-    printf("Monochrome image...\n");
+    printf("width: %d\n", width);
+    printf("height: %d\n", height);
+
+    printf("\nMonochrome image...\n");
 
     uint8_t *monochrome_image = malloc(size * sizeof(uint8_t));
-    convert_to_monochrome(size, original_image, monochrome_image);
+    convert_to_monochrome_naive(size, original_image, monochrome_image);
 
     free(original_image);
 
@@ -138,15 +142,15 @@ int main() {
     // }
     // fclose(fOut);
 
-    printf("Monochrome complete: \n");
+    printf("Monochrome completed\n");
     // print_uint8_t_array(height, width, monochrome_image);
 
 
-    printf("Gaussian Blur\n");
+    printf("\nGaussian Blur...\n");
     printf("Gaussian Blur KERNEL_SIZE = %d\n", GBLUR_KERNEL_SIZE);
 
     float kernel[GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE] = {};
-    fill_gaussian_blur_kernel(GBLUR_KERNEL_SIZE, kernel);
+    fill_gaussian_blur_kernel_naive(GBLUR_KERNEL_SIZE, kernel);
     printf("Gaussian Blur kernel:\n");
     print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, kernel);
 
@@ -162,13 +166,18 @@ int main() {
     }
 
     fclose(fOut);
-    free(gaussian_blur_image); ////!!!!!!!!!!
 
-    // printf("\n\nGaussian Blur output / Sobel Edge Detection input image:\n");
-    // print_2D_uint8_t_array(HEIGHT, WIDTH, out_GB_image);
+    printf("Gaussian Blur completed\n");
+
+
+    printf("\nSobel Edge Detection\n");
+
+
+
+    free(gaussian_blur_image); ////!!!!!!!!!!
 
     return 0;
 }
 
-
+// https://abhijitnathwani.github.io/blog/2018/01/08/rgbtogray-Image-using-C
 // https://github.com/abhijitnathwani/image-processing/blob/master/image_rgbtogray.c
