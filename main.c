@@ -49,7 +49,10 @@ void print_uint8_t_array(const int height, const int width, const uint8_t * arra
 // Core logic
 void convert_to_monochrome_naive(const int size, uint8_t in_image[size][3], uint8_t out_image[size]) {
     for (int i = 0; i < size; i++)
-        out_image[i] = (uint8_t)(0.3f * in_image[i][0] + 0.59f * in_image[i][1] + 0.11f * in_image[i][2]);
+        out_image[i] = (uint8_t)(
+            0.3f * in_image[i][0] +     // R
+            0.59f * in_image[i][1] +    // G
+            0.11f * in_image[i][2]);    // B
 }
 
 void fill_gaussian_blur_kernel_naive(int size, float kernel[size][size]) {
@@ -100,8 +103,8 @@ void sobel_edge_detection_naive(const int height, const int width,
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            float sumx = 0.0f;
-            float sumy = 0.0f;
+            float sumx = 0.f;
+            float sumy = 0.f;
 
             for (int ki = -radius; ki <= radius; ki++) {
                 for (int kj = -radius; kj <= radius; kj++) {
@@ -138,8 +141,8 @@ int main() {
     printf("Welcome to Gaussian Blur & Sobel Edge Detection!\n");
     printf("\nLoading image...\n");
 
-    FILE *fIn = fopen("input.bmp","rb"); // Input file
-    FILE *fOut = fopen("output.bmp","w+b"); // Output file
+    FILE *fIn = fopen("input.bmp","rb");
+    FILE *fOut;
 
     if (fIn == NULL) {
         printf("File does not exist.\n");
@@ -148,7 +151,6 @@ int main() {
 
     unsigned char header[54];
     fread(header, sizeof(unsigned char), 54, fIn);
-    fwrite(header, sizeof(unsigned char), 54, fOut);
 
     const int width  = *(int *)&header[18];
     const int height = *(int *)&header[22];
@@ -170,12 +172,15 @@ int main() {
 
     free(original_image);
 
-    // for (int i = 0; i < size; i++) {
-    //     fputc(monochrome_image[i], fOut); // B
-    //     fputc(monochrome_image[i], fOut); // G
-    //     fputc(monochrome_image[i], fOut); // R
-    // }
-    // fclose(fOut);
+
+    fOut = fopen("out_monochrome.bmp","w+b");
+    fwrite(header, sizeof(unsigned char), 54, fOut);
+    for (int i = 0; i < size; i++) {
+        fputc(monochrome_image[i], fOut); // B
+        fputc(monochrome_image[i], fOut); // G
+        fputc(monochrome_image[i], fOut); // R
+    }
+    fclose(fOut);
 
     printf("Monochrome completed\n");
     // print_uint8_t_array(height, width, monochrome_image);
@@ -194,13 +199,14 @@ int main() {
                         GBLUR_KERNEL_SIZE, kernel);
     free(monochrome_image);
 
-    // for (int i = 0; i < size; i++) {
-    //     fputc(gaussian_blur_image[i], fOut); // B
-    //     fputc(gaussian_blur_image[i], fOut); // G
-    //     fputc(gaussian_blur_image[i], fOut); // R
-    // }
-
-    // fclose(fOut);
+    fOut = fopen("out_gaussian_blur.bmp","w+b");
+    fwrite(header, sizeof(unsigned char), 54, fOut);
+    for (int i = 0; i < size; i++) {
+        fputc(gaussian_blur_image[i], fOut); // B
+        fputc(gaussian_blur_image[i], fOut); // G
+        fputc(gaussian_blur_image[i], fOut); // R
+    }
+    fclose(fOut);
 
     printf("Gaussian Blur completed\n");
 
@@ -209,12 +215,14 @@ int main() {
     sobel_edge_detection_naive(height, width, gaussian_blur_image, sobel_image);
     free(gaussian_blur_image);
 
+
+    fOut = fopen("out_sobel_edge.bmp","w+b");
+    fwrite(header, sizeof(unsigned char), 54, fOut);
     for (int i = 0; i < size; i++) {
         fputc(sobel_image[i], fOut); // B
         fputc(sobel_image[i], fOut); // G
         fputc(sobel_image[i], fOut); // R
     }
-
     fclose(fOut);
     free(sobel_image);
     printf("Sobel Edge Detection completed\n");
@@ -228,3 +236,5 @@ int main() {
 // https://medium.com/@twinnroshan/understanding-and-implementing-edge-detection-in-c-with-sobel-operator-31159f26587c
 // https://github.com/fzehracetin/sobel-edge-detection-in-c/tree/main
 // https://homepages.inf.ed.ac.uk/rbf/HIPR2/sobel.htm
+// https://www.youtube.com/watch?v=uihBwtPIBxM&t=6s
+// https://www.youtube.com/watch?v=C_zFhWdM4ic&t=136s
