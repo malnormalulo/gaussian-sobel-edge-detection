@@ -11,7 +11,7 @@
 
 // sobel edge detection params & values
 #define SED_KERNEL_SIZE 3
-#define THRESHOLD 11 // TODO: adjust value, think how to adjust on fly
+#define THRESHOLD 25.f // TODO: adjust value, think how to adjust on fly
 
 int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     {-1, 0, 1},
@@ -56,7 +56,6 @@ void fill_gaussian_blur_kernel_naive(int size, float kernel[size][size]) {
     const int r = GBLUR_KERNEL_SIZE / 2;  // radius
     float sum = 0.f;
 
-    // calculating G(x, y) for every cell
     for (int i = 0; i < GBLUR_KERNEL_SIZE; i++) {
         for (int j = 0; j < GBLUR_KERNEL_SIZE; j++) {
             const int x = i - r;  // offset fom center
@@ -94,7 +93,46 @@ void gaussian_blur_naive(const int height, const int width,
         }
 }
 
+void sobel_edge_detection_naive(const int height, const int width,
+                                  const uint8_t input[height * width],
+                                  uint8_t output[height * width]) {
+    const int radius = SED_KERNEL_SIZE / 2;
 
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            float sumx = 0.0f;
+            float sumy = 0.0f;
+
+            for (int ki = -radius; ki <= radius; ki++) {
+                for (int kj = -radius; kj <= radius; kj++) {
+                    const int ci = i + ki < 0
+                        ? 0
+                        : i + ki >= height
+                            ? height - 1
+                            : i + ki;
+                    const int cj = j + kj < 0
+                        ? 0
+                        : j + kj >= width
+                            ? width  - 1
+                            : j + kj;
+
+                    const float px = input[ci * width + cj];
+                    sumx += px * G_x[ki + radius][kj + radius];
+                    sumy += px * G_y[ki + radius][kj + radius];
+                }
+            }
+
+            float mag = sqrtf(sumx * sumx + sumy * sumy);
+            output[i * width + j] = (uint8_t)(
+                mag > 255.f
+                    ? 255.f
+                    : mag < THRESHOLD
+                        ? 0.f
+                        : mag
+                );
+        }
+    }
+}
 
 int main() {
     printf("Welcome to Gaussian Blur & Sobel Edge Detection!\n");
@@ -103,8 +141,7 @@ int main() {
     FILE *fIn = fopen("input.bmp","rb"); // Input file
     FILE *fOut = fopen("output.bmp","w+b"); // Output file
 
-    if(fIn == NULL)
-    {
+    if (fIn == NULL) {
         printf("File does not exist.\n");
         return -1;
     }
@@ -113,9 +150,10 @@ int main() {
     fread(header, sizeof(unsigned char), 54, fIn);
     fwrite(header, sizeof(unsigned char), 54, fOut);
 
-    // extract image height, width from imageHeader
-    const int width = *(int*)&header[18];
-    const int height = *(int*)&header[22];
+    const int width  = *(int *)&header[18];
+    const int height = *(int *)&header[22];
+
+    printf("width: %d, height: %d\n", width, height);
 
     const int size = height * width;
     uint8_t (*original_image)[3] = malloc(size * 3 * sizeof(uint8_t));
@@ -124,9 +162,6 @@ int main() {
 
     fclose(fIn);
     printf("Loading completed\n");
-
-    printf("width: %d\n", width);
-    printf("height: %d\n", height);
 
     printf("\nMonochrome image...\n");
 
@@ -149,35 +184,47 @@ int main() {
     printf("\nGaussian Blur...\n");
     printf("Gaussian Blur KERNEL_SIZE = %d\n", GBLUR_KERNEL_SIZE);
 
-    float kernel[GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE] = {};
+    float kernel[GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE];
     fill_gaussian_blur_kernel_naive(GBLUR_KERNEL_SIZE, kernel);
     printf("Gaussian Blur kernel:\n");
     print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, kernel);
 
     uint8_t *gaussian_blur_image = malloc(size * sizeof(uint8_t));
     gaussian_blur_naive(height, width, monochrome_image, gaussian_blur_image,
-        GBLUR_KERNEL_SIZE, kernel);
+                        GBLUR_KERNEL_SIZE, kernel);
     free(monochrome_image);
 
-    for (int i = 0; i < size; i++) {
-        fputc(gaussian_blur_image[i], fOut); // B
-        fputc(gaussian_blur_image[i], fOut); // G
-        fputc(gaussian_blur_image[i], fOut); // R
-    }
+    // for (int i = 0; i < size; i++) {
+    //     fputc(gaussian_blur_image[i], fOut); // B
+    //     fputc(gaussian_blur_image[i], fOut); // G
+    //     fputc(gaussian_blur_image[i], fOut); // R
+    // }
 
-    fclose(fOut);
+    // fclose(fOut);
 
     printf("Gaussian Blur completed\n");
 
-
     printf("\nSobel Edge Detection\n");
+    uint8_t *sobel_image = malloc(size * sizeof(uint8_t));
+    sobel_edge_detection_naive(height, width, gaussian_blur_image, sobel_image);
+    free(gaussian_blur_image);
 
+    for (int i = 0; i < size; i++) {
+        fputc(sobel_image[i], fOut); // B
+        fputc(sobel_image[i], fOut); // G
+        fputc(sobel_image[i], fOut); // R
+    }
 
-
-    free(gaussian_blur_image); ////!!!!!!!!!!
+    fclose(fOut);
+    free(sobel_image);
+    printf("Sobel Edge Detection completed\n");
+    // print_uint8_t_array(height, width, sobel_image);
 
     return 0;
 }
 
 // https://abhijitnathwani.github.io/blog/2018/01/08/rgbtogray-Image-using-C
 // https://github.com/abhijitnathwani/image-processing/blob/master/image_rgbtogray.c
+// https://medium.com/@twinnroshan/understanding-and-implementing-edge-detection-in-c-with-sobel-operator-31159f26587c
+// https://github.com/fzehracetin/sobel-edge-detection-in-c/tree/main
+// https://homepages.inf.ed.ac.uk/rbf/HIPR2/sobel.htm
