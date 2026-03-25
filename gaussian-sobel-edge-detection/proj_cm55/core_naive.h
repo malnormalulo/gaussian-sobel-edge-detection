@@ -40,3 +40,59 @@ void gaussian_blur(
             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);  // normalization
         }
 }
+
+
+int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
+    {-1, 0, 1},
+    {-2, 0, 2},
+    {-1, 0, 1}
+};
+int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
+    {-1, -2, -1},
+    { 0,  0,  0},
+    { 1,  2,  1}
+};
+
+void sobel_edge_detection(
+    int height,
+    int width,
+    uint8_t input[height * width],
+    uint8_t output[height * width]
+) {
+    const int radius = SED_KERNEL_SIZE / 2;
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            float sumx = 0.f;
+            float sumy = 0.f;
+
+            for (int ki = -radius; ki <= radius; ki++) {
+                for (int kj = -radius; kj <= radius; kj++) {
+                    const int ci = i + ki < 0
+                        ? 0
+                        : i + ki >= height
+                            ? height - 1
+                            : i + ki;
+                    const int cj = j + kj < 0
+                        ? 0
+                        : j + kj >= width
+                            ? width  - 1
+                            : j + kj;
+
+                    const float px = input[ci * width + cj];
+                    sumx += px * G_x[ki + radius][kj + radius];
+                    sumy += px * G_y[ki + radius][kj + radius];
+                }
+            }
+
+            float mag = sqrtf(sumx * sumx + sumy * sumy);
+            output[i * width + j] = (uint8_t)(
+                mag > 255.f
+                    ? 255.f
+                    : mag < THRESHOLD
+                        ? 0.f
+                        : mag
+                );
+        }
+    }
+}

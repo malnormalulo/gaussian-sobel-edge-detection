@@ -35,7 +35,7 @@ void print_summary(const char * fname,
         snprintf(check_output, sizeof(check_output), "OK");
 
 
-    printf("%s: cycles = %7ld,\t instr = %6ld,\t mac/cycle = %.3f,\t instr/mac = %.3f,\t output = %s\n",
+    printf("%s: cycles = %7ld,\t instr = %6ld,\t mac/cycle = %.3f,\t instr/mac = %.3f,\t output = %s\n\n",
            fname, metrics.cycles, metrics.instructions, mac/metrics.cycles, metrics.instructions/mac, check_output);
 }
 
@@ -73,7 +73,17 @@ CY_SECTION(".cy_itcm") int main(void)
     perf_counter_start();
     gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur, GBLUR_KERNEL_SIZE, gaussian_kernel);
     res = perf_counter_stop();
-    print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
+    print_summary("\ngaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
+    free(actual_out_monochrome);
+
+    mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;
+    uint8_t *actual_out_sobel = malloc(size * sizeof(uint8_t));
+    perf_counter_start();
+    sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
+    res = perf_counter_stop();
+    print_summary("sobel edge", actual_out_sobel, out_sobel_edge, size, mac, res);
+    free(actual_out_monochrome);
+    free(actual_out_sobel);
     
     while(1) {
     }

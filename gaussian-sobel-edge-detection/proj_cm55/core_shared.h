@@ -8,6 +8,10 @@
 #define NO_INLINE  __attribute__ ((noinline))
 
 
+// sobel params
+#define SED_KERNEL_SIZE 3
+#define THRESHOLD 25.f
+
 // gaussian blur params
 #define SIGMA 1
 #define GBLUR_KERNEL_SIZE 3 //(int)(2 * round(SIGMA) + 1)
