@@ -10,13 +10,10 @@
 #include "out_sobel_edge.h"
 
 #include "core_naive.h"
+// #include "core.h"
 
-/*
- * We use NO_INLINE for all profiled functions for these reasons:
- * 1) Easier to inspect start/end of functions in disassembly code
- * 2) More correct performance measurements
- */
-#define NO_INLINE  __attribute__ ((noinline))
+#include "utills.h"
+
 
 void print_summary(const char * fname, 
     const uint8_t * actual, 
@@ -68,6 +65,9 @@ CY_SECTION(".cy_itcm") int main(void)
     convert_to_monochrome(size, input_image, actual_out_monochrome);
     res = perf_counter_stop();
     print_summary("monochrome", actual_out_monochrome, out_monochrome, size, mac, res);
+
+    fill_gaussian_blur_kernel();
+    print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
 
     // 
     // perf_counter_start();

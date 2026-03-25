@@ -113,11 +113,11 @@ void convert_to_monochrome_naive(const size_t size, uint8_t* in_image, uint8_t* 
 }
 
 void fill_gaussian_blur_kernel_naive(int size, float kernel[size][size]) {
-    const int r = GBLUR_KERNEL_SIZE / 2;  // radius
+    const int r = size / 2;  // radius
     float sum = 0.f;
 
-    for (int i = 0; i < GBLUR_KERNEL_SIZE; i++) {
-        for (int j = 0; j < GBLUR_KERNEL_SIZE; j++) {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
             const int x = i - r;  // offset fom center
             const int y = j - r;
             kernel[i][j] = exp(-(x*x + y*y) / (2.0 * SIGMA * SIGMA))
