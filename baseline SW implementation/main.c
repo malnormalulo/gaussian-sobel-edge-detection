@@ -5,7 +5,7 @@
 
 
 // gaussian blur params
-#define SIGMA 1.5
+#define SIGMA 1
 #define GBLUR_KERNEL_SIZE (int)(2 * round(SIGMA) + 1)
 
 
@@ -141,7 +141,7 @@ int main() {
     printf("Welcome to Gaussian Blur & Sobel Edge Detection!\n");
     printf("\nLoading image...\n");
 
-    FILE *fIn = fopen("input.bmp","rb");
+    FILE *fIn = fopen("input2.bmp","rb");
     FILE *fOut;
 
     if (fIn == NULL) {
@@ -160,7 +160,7 @@ int main() {
     const int size = height * width;
     uint8_t (*original_image)[3] = malloc(size * 3 * sizeof(uint8_t));
 
-    fread(original_image, sizeof(uint8_t), size * 3, fIn);
+    (void)fread(original_image, sizeof(uint8_t), size * 3, fIn);
 
     fclose(fIn);
     printf("Loading completed\n");

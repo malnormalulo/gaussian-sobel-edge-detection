@@ -44,3 +44,7 @@ library-manager.log
 
 .clangd
 /baseline SW implementation/CMakeLists.txt
+/baseline SW implementation/main
+/baseline SW implementation/out_gaussian_blur.bmp
+/baseline SW implementation/out_monochrome.bmp
+/baseline SW implementation/out_sobel_edge.bmp
