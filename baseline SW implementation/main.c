@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 
 // gaussian blur params
 #define SIGMA 1
@@ -45,14 +50,63 @@ void print_uint8_t_array(const int height, const int width, const uint8_t * arra
     }
 }
 
+typedef struct {
+    uint8_t *data;   // RGB, size = width * height * 3
+    int width;
+    int height;
+} ImageRGB;
+
+ImageRGB load_rgb_image(const char *path) {
+    ImageRGB img = {0};
+
+    int channels = 0;
+    uint8_t *pixels = stbi_load(path, &img.width, &img.height, &channels, 3);
+    if (!pixels) {
+        fprintf(stderr, "Failed to load image '%s': %s\n", path, stbi_failure_reason());
+        return img;
+    }
+
+    img.data = pixels;
+    return img;
+}
+
+void free_rgb_image(ImageRGB *img) {
+    if (img->data) {
+        stbi_image_free(img->data);
+        img->data = NULL;
+    }
+}
+
+uint8_t *alloc_gray_buffer(const ImageRGB *img) {
+    return malloc(img->width * img->height * sizeof(uint8_t));
+}
+
+uint8_t *gray_to_rgb(const uint8_t *gray, int size) {
+    uint8_t *rgb = malloc(size * 3 * sizeof(uint8_t));
+    for (int i = 0; i < size; i++) {
+        rgb[i * 3 + 0] = gray[i];
+        rgb[i * 3 + 1] = gray[i];
+        rgb[i * 3 + 2] = gray[i];
+    }
+    return rgb;
+}
+
+void save_gray_as_bmp(const char *path, const uint8_t *gray,
+                      int width, int height) {
+    const int size = width * height;
+    uint8_t *rgb = gray_to_rgb(gray, size);
+    stbi_write_bmp(path, width, height, 3, rgb);
+    free(rgb);
+}
+
 
 // Core logic
-void convert_to_monochrome_naive(const int size, uint8_t in_image[size][3], uint8_t out_image[size]) {
-    for (int i = 0; i < size; i++)
+void convert_to_monochrome_naive(const size_t size, uint8_t* in_image, uint8_t* out_image) {
+    for (size_t i = 0; i < size; i++)
         out_image[i] = (uint8_t)(
-            0.3f * in_image[i][0] +     // R
-            0.59f * in_image[i][1] +    // G
-            0.11f * in_image[i][2]);    // B
+            0.3f  * in_image[i*3] +
+            0.59f * in_image[i*3 + 1] +
+            0.11f * in_image[i*3 + 2]);
 }
 
 void fill_gaussian_blur_kernel_naive(int size, float kernel[size][size]) {
@@ -139,94 +193,50 @@ void sobel_edge_detection_naive(const int height, const int width,
 
 int main() {
     printf("Welcome to Gaussian Blur & Sobel Edge Detection!\n");
+
     printf("\nLoading image...\n");
-
-    FILE *fIn = fopen("input2.bmp","rb");
-    FILE *fOut;
-
-    if (fIn == NULL) {
-        printf("File does not exist.\n");
+    ImageRGB src = load_rgb_image("input2.bmp");
+    if (!src.data) {
         return -1;
     }
-
-    unsigned char header[54];
-    fread(header, sizeof(unsigned char), 54, fIn);
-
-    const int width  = *(int *)&header[18];
-    const int height = *(int *)&header[22];
-
-    printf("width: %d, height: %d\n", width, height);
-
-    const int size = height * width;
-    uint8_t (*original_image)[3] = malloc(size * 3 * sizeof(uint8_t));
-
-    (void)fread(original_image, sizeof(uint8_t), size * 3, fIn);
-
-    fclose(fIn);
+    printf("width: %d, height: %d\n", src.width, src.height);
     printf("Loading completed\n");
 
+    const int size = src.width * src.height;
+
     printf("\nMonochrome image...\n");
+    uint8_t *monochrome_image = alloc_gray_buffer(&src);
+    convert_to_monochrome_naive(size, src.data, monochrome_image);
+    free_rgb_image(&src);
 
-    uint8_t *monochrome_image = malloc(size * sizeof(uint8_t));
-    convert_to_monochrome_naive(size, original_image, monochrome_image);
-
-    free(original_image);
-
-
-    fOut = fopen("out_monochrome.bmp","w+b");
-    fwrite(header, sizeof(unsigned char), 54, fOut);
-    for (int i = 0; i < size; i++) {
-        fputc(monochrome_image[i], fOut); // B
-        fputc(monochrome_image[i], fOut); // G
-        fputc(monochrome_image[i], fOut); // R
-    }
-    fclose(fOut);
-
+    save_gray_as_bmp("out_monochrome.bmp", monochrome_image, src.width, src.height);
     printf("Monochrome completed\n");
-    // print_uint8_t_array(height, width, monochrome_image);
-
 
     printf("\nGaussian Blur...\n");
     printf("Gaussian Blur KERNEL_SIZE = %d\n", GBLUR_KERNEL_SIZE);
 
     float kernel[GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE];
     fill_gaussian_blur_kernel_naive(GBLUR_KERNEL_SIZE, kernel);
-    printf("Gaussian Blur kernel:\n");
     print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, kernel);
 
     uint8_t *gaussian_blur_image = malloc(size * sizeof(uint8_t));
-    gaussian_blur_naive(height, width, monochrome_image, gaussian_blur_image,
+    gaussian_blur_naive(src.height, src.width,
+                        monochrome_image, gaussian_blur_image,
                         GBLUR_KERNEL_SIZE, kernel);
     free(monochrome_image);
 
-    fOut = fopen("out_gaussian_blur.bmp","w+b");
-    fwrite(header, sizeof(unsigned char), 54, fOut);
-    for (int i = 0; i < size; i++) {
-        fputc(gaussian_blur_image[i], fOut); // B
-        fputc(gaussian_blur_image[i], fOut); // G
-        fputc(gaussian_blur_image[i], fOut); // R
-    }
-    fclose(fOut);
-
+    save_gray_as_bmp("out_gaussian_blur.bmp", gaussian_blur_image, src.width, src.height);
     printf("Gaussian Blur completed\n");
 
     printf("\nSobel Edge Detection\n");
     uint8_t *sobel_image = malloc(size * sizeof(uint8_t));
-    sobel_edge_detection_naive(height, width, gaussian_blur_image, sobel_image);
+    sobel_edge_detection_naive(src.height, src.width,
+                               gaussian_blur_image, sobel_image);
     free(gaussian_blur_image);
 
-
-    fOut = fopen("out_sobel_edge.bmp","w+b");
-    fwrite(header, sizeof(unsigned char), 54, fOut);
-    for (int i = 0; i < size; i++) {
-        fputc(sobel_image[i], fOut); // B
-        fputc(sobel_image[i], fOut); // G
-        fputc(sobel_image[i], fOut); // R
-    }
-    fclose(fOut);
+    save_gray_as_bmp("out_sobel_edge.bmp", sobel_image, src.width, src.height);
     free(sobel_image);
     printf("Sobel Edge Detection completed\n");
-    // print_uint8_t_array(height, width, sobel_image);
 
     return 0;
 }
@@ -238,3 +248,4 @@ int main() {
 // https://homepages.inf.ed.ac.uk/rbf/HIPR2/sobel.htm
 // https://www.youtube.com/watch?v=uihBwtPIBxM&t=6s
 // https://www.youtube.com/watch?v=C_zFhWdM4ic&t=136s
+// https://stackoverflow.com/questions/42618100/bmp-processing-in-c
