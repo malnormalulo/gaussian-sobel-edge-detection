@@ -58,7 +58,6 @@ CY_SECTION(".cy_itcm") int main(void)
 
     size_t size = IN_HEIGHT * IN_WIDTH;
 
-    // Baseline
     mac = size * 3;
     uint8_t *actual_out_monochrome = malloc(size * sizeof(uint8_t));
     perf_counter_start();
@@ -69,11 +68,12 @@ CY_SECTION(".cy_itcm") int main(void)
     fill_gaussian_blur_kernel();
     print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
 
-    // 
-    // perf_counter_start();
-    // matmul_unrolled_int8(mat_a, mat_b, mat_c, DATA_A_ROWS, DATA_A_COLS, DATA_B_COLS);
-    // res = perf_counter_stop();
-    // print_summary("matmul_unrolled_int8         ", mat_c, mat_c_expected, DATA_C_ROWS, DATA_C_COLS, mac, res);
+    mac = GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size;
+    uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
+    perf_counter_start();
+    gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur, GBLUR_KERNEL_SIZE, gaussian_kernel);
+    res = perf_counter_stop();
+    print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
     
     while(1) {
     }
