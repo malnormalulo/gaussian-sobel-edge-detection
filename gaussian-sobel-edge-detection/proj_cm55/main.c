@@ -35,8 +35,16 @@ void print_summary(const char * fname,
         snprintf(check_output, sizeof(check_output), "OK");
 
 
-    printf("%s: cycles = %7ld,\t instr = %6ld,\t mac/cycle = %.3f,\t instr/mac = %.3f,\t output = %s\n\n",
-           fname, metrics.cycles, metrics.instructions, mac/metrics.cycles, metrics.instructions/mac, check_output);
+    printf("%s: cycles = %7lu,\t instr = %6lu,\t mac/cycle = %.3f,\t instr/mac = %.3f,"
+           "\t IPC = %.3f,\t cycles/px = %.3f,\t output = %s\n\n",
+           fname,
+           metrics.cycles,
+           metrics.instructions,
+           mac / metrics.cycles,
+           metrics.instructions / mac,
+           (float) metrics.instructions / metrics.cycles,
+           (float) metrics.cycles / size,
+           check_output);
 }
 
 

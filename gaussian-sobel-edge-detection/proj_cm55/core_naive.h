@@ -2,7 +2,7 @@
 
 NO_INLINE void convert_to_monochrome(
     size_t size, 
-    uint8_t* in_image, 
+    const uint8_t* in_image, 
     uint8_t* out_image
 ) {
     for (size_t i = 0; i < size; i++)
