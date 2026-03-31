@@ -12,7 +12,7 @@ NO_INLINE void convert_to_monochrome(
             (float)0.11 * in_image[i*3 + 2]);
 }
 
-void gaussian_blur(
+NO_INLINE void gaussian_blur(
     int height, 
     int width,
     uint8_t input[height * width], 
@@ -39,18 +39,18 @@ void gaussian_blur(
 }
 
 
-int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
+static const int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     {-1, 0, 1},
     {-2, 0, 2},
     {-1, 0, 1}
 };
-int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
+static const int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     {-1, -2, -1},
     { 0,  0,  0},
     { 1,  2,  1}
 };
 
-void sobel_edge_detection(
+NO_INLINE void sobel_edge_detection(
     int height,
     int width,
     uint8_t input[height * width],

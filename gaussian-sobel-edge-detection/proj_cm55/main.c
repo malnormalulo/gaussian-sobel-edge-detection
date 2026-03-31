@@ -63,6 +63,7 @@ CY_SECTION(".cy_itcm") int main(void)
     init_retarget_io();
     perf_counter_init();
     printf("Init finished\n");
+    printf("SystemCoreClock: %lu Hz (%.2f MHz)\n\n", SystemCoreClock, SystemCoreClock / 1000000.0);
 
     size_t size = IN_HEIGHT * IN_WIDTH;
 
