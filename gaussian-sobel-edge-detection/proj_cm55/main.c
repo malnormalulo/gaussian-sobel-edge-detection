@@ -35,8 +35,8 @@ void print_summary(const char * fname,
         snprintf(check_output, sizeof(check_output), "OK");
 
 
-    printf("%s: cycles = %7lu,\t instr = %6lu,\t mac/cycle = %.3f,\t instr/mac = %.3f,"
-           "\t IPC = %.3f,\t cycles/px = %.3f,\t output = %s\n\n",
+    printf("%s: cycles = %7lu,\t instr = %6lu,\t mac/cycle = %f,\t instr/mac = %f,"
+           "\t IPC = %f,\t cycles/px = %f,\t output = %s\n\n",
            fname,
            metrics.cycles,
            metrics.instructions,
@@ -66,23 +66,23 @@ CY_SECTION(".cy_itcm") int main(void)
 
     size_t size = IN_HEIGHT * IN_WIDTH;
 
+    fill_gaussian_blur_kernel();
+    print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
+
     mac = size * 3;
     uint8_t *actual_out_monochrome = malloc(size * sizeof(uint8_t));
     perf_counter_start();
     convert_to_monochrome(size, input_image, actual_out_monochrome);
     res = perf_counter_stop();
-    print_summary("monochrome", actual_out_monochrome, out_monochrome, size, mac, res);
-
-    fill_gaussian_blur_kernel();
-    print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
+    print_summary("\nmonochrome", actual_out_monochrome, out_monochrome, size, mac, res);
 
     mac = GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size;
     uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
     perf_counter_start();
     gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur, GBLUR_KERNEL_SIZE, gaussian_kernel);
     res = perf_counter_stop();
-    print_summary("\ngaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
-    free(actual_out_monochrome);
+    print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
+    // free(actual_out_monochrome);
 
     mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;
     uint8_t *actual_out_sobel = malloc(size * sizeof(uint8_t));
@@ -90,6 +90,23 @@ CY_SECTION(".cy_itcm") int main(void)
     sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
     res = perf_counter_stop();
     print_summary("sobel edge", actual_out_sobel, out_sobel_edge, size, mac, res);
+    // free(actual_out_monochrome);
+    // free(actual_out_sobel);
+
+    mac = size*3 + GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size + SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;
+    // uint8_t *actual_out_monochrome = malloc(size * sizeof(uint8_t));
+    // uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
+    // uint8_t *actual_out_sobel = malloc(size * sizeof(uint8_t));
+
+    perf_counter_start();
+    convert_to_monochrome(size, input_image, actual_out_monochrome);
+    gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur, GBLUR_KERNEL_SIZE, gaussian_kernel);
+    sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
+    res = perf_counter_stop();
+
+    print_summary("full sobel edge pipeline", actual_out_sobel, out_sobel_edge, size, mac, res);
+    
+    free(actual_out_monochrome);
     free(actual_out_monochrome);
     free(actual_out_sobel);
     
