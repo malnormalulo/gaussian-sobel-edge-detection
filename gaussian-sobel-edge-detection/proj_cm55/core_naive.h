@@ -1,5 +1,6 @@
 #include "core_shared.h"
 
+CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
     size_t size, 
     const uint8_t* in_image, 
@@ -12,6 +13,7 @@ NO_INLINE void convert_to_monochrome(
             (float)0.11 * in_image[i*3 + 2]);
 }
 
+CY_SECTION(".cy_itcm")
 NO_INLINE void gaussian_blur(
     int height, 
     int width,
@@ -50,6 +52,7 @@ static const int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     { 1,  2,  1}
 };
 
+CY_SECTION(".cy_itcm")
 NO_INLINE void sobel_edge_detection(
     int height,
     int width,

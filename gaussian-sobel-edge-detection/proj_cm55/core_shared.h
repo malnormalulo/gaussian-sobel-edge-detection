@@ -18,6 +18,7 @@
 
 static float gaussian_kernel [GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE];
 
+CY_SECTION(".cy_itcm")
 NO_INLINE void fill_gaussian_blur_kernel() {
     const int r = GBLUR_KERNEL_SIZE / 2;  // radius
     float sum = 0.f;
