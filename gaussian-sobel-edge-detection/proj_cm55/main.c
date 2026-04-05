@@ -9,8 +9,8 @@
 #include "out_gaussian_blur.h"
 #include "out_sobel_edge.h"
 
-#include "core_naive.h"
-// #include "core.h"
+// #include "core_naive.h"
+#include "core.h"
 
 #include "utills.h"
 
