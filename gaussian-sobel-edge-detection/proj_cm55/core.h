@@ -8,9 +8,9 @@ NO_INLINE void convert_to_monochrome(
 ) {
     for (size_t i = 0; i < size; i++)
         out_image[i] = (uint8_t)(
-            (float)0.3  * in_image[i*3] +
-            (float)0.59 * in_image[i*3 + 1] +
-            (float)0.11 * in_image[i*3 + 2]);
+            ((uint16_t)77 * in_image[i*3] +           // 0.3  * 256 =  77
+            (uint16_t)151 * in_image[i*3 + 1] +       // 0.59 * 256 = 151
+            (uint16_t) 28 * in_image[i*3 + 2]) >> 8); // 0.11 * 256 =  28
 }
 
 CY_SECTION(".cy_itcm")
