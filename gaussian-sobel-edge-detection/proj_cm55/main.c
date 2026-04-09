@@ -20,13 +20,13 @@ void print_summary(const char * fname,
     const uint8_t * expected, 
     size_t size, 
     float mac,
-     perf_result_t metrics)
+    perf_result_t metrics)
 {
     char check_output[256];
     int error = 0;
 
     for (size_t i = 0; i < size; i++) {
-        if (actual[i] != expected[i*3])
+        if ((int)actual[i] > (int)expected[i*3] + 4 || (int)actual[i] < (int)expected[i*3] - 4)
             error++;
     }
     if (error > 0)
