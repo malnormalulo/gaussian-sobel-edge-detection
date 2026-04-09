@@ -59,14 +59,33 @@ NO_INLINE void gaussian_blur(
     const int radius = GBLUR_KERNEL_SIZE / 2;
 
     // center
-    for (int i = radius; i < height - radius; i++)
-        for (int j = radius; j < width - radius; j++) {
-            uint16_t cell_sum = 0;
-            for (int ki = -radius; ki < radius + 1; ki++)
-                for (int kj = -radius; kj < radius + 1; kj++)
-                    cell_sum += (uint16_t)input[(i + ki) * width + (j + kj)] * gaussian_kernel[ki + radius][kj + radius];
-            output[i * width + j] = (uint8_t)(cell_sum >> 8); // normalization
+    for (int i = radius; i < height - radius; i++) {
+        int j = radius;
+
+        for (; j <= (int)(width - radius) - 8; j += 8) {
+            uint16x8_t acc = vdupq_n_u16(0);
+
+            for (int ki = -radius; ki <= radius; ki++) {
+                for (int kj = -radius; kj <= radius; kj++) {
+                    uint16x8_t v16 = vldrbq_u16(
+                        &input[(i + ki) * width + (j + kj)]
+                    );
+                    uint8_t w = gaussian_kernel[ki + radius][kj + radius];
+                    acc = vmlaq_n_u16(acc, v16, (uint16_t)w);
+                }
+            }
+
+            vstrbq_u16(&output[i * width + j], vshrq_n_u16(acc, 8));
         }
+
+        for (; j < width - radius; j++) {
+            uint16_t cell_sum = 0;
+            for (int ki = -radius; ki <= radius; ki++)
+                for (int kj = -radius; kj <= radius; kj++)
+                    cell_sum += input[(i + ki) * width + (j + kj)] * gaussian_kernel[ki + radius][kj + radius];
+            output[i * width + j] = (uint8_t)(cell_sum >> 8);
+        }
+    }
     
     // edges
     for (int j = 0; j < width; j++) {
