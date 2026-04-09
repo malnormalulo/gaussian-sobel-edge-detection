@@ -6,11 +6,51 @@ NO_INLINE void convert_to_monochrome(
     const uint8_t* in_image, 
     uint8_t* out_image
 ) {
-    for (size_t i = 0; i < size; i++)
-        out_image[i] = (uint8_t)(
-            ((uint16_t)77 * in_image[i*3] +           // 0.3  * 256 =  77
-            (uint16_t)151 * in_image[i*3 + 1] +       // 0.59 * 256 = 151
-            (uint16_t) 28 * in_image[i*3 + 2]) >> 8); // 0.11 * 256 =  28
+    uint32_t block_count = size / 8; 
+    uint32_t tail_count = size % 8;
+
+    // offsets for every 3rd byte
+    static const uint16_t offsets[8] = {0, 3, 6, 9, 12, 15, 18, 21};
+    uint16x8_t v_offsets = vld1q_u16(offsets);
+
+    while (block_count > 0) {
+        // Gather load to form channels arrays for every pixel
+        uint16x8_t r = vldrbq_gather_offset_u16(in_image, v_offsets);
+        uint16x8_t g = vldrbq_gather_offset_u16(in_image + 1, v_offsets);
+        uint16x8_t b = vldrbq_gather_offset_u16(in_image + 2, v_offsets);
+
+        // calculation
+        uint16x8_t y = vmulq_n_u16(r, 77);
+        y = vmlaq_n_u16(y, g, 151);
+        y = vmlaq_n_u16(y, b, 28);
+
+        // shifting
+        y = vshrq_n_u16(y, 8);
+
+        // converting to 8 bit
+        vstrbq_u16(out_image, y);
+
+        in_image += 8 * 3; 
+        out_image += 8;
+        block_count--;
+    }
+
+    if (tail_count > 0) {
+        mve_pred16_t p = vctp16q(tail_count);
+        
+        // Gather Loads with mask (zeroing)
+        uint16x8_t r = vldrbq_gather_offset_z_u16(in_image, v_offsets, p);
+        uint16x8_t g = vldrbq_gather_offset_z_u16(in_image + 1, v_offsets, p);
+        uint16x8_t b = vldrbq_gather_offset_z_u16(in_image + 2, v_offsets, p);
+        
+        uint16x8_t y = vmulq_n_u16(r, 77);
+        y = vmlaq_n_u16(y, g, 151);
+        y = vmlaq_n_u16(y, b, 28);
+
+        y = vshrq_n_u16(y, 8);
+
+        vstrbq_p_u16(out_image, y, p);
+    }
 }
 
 CY_SECTION(".cy_itcm")
