@@ -51,8 +51,8 @@ NO_INLINE void convert_to_monochrome(
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void gaussian_blur(
-    int height, 
-    int width,
+    size_t height, 
+    size_t width,
     uint8_t input[height * width], 
     uint8_t output[height * width]
 ) {
@@ -77,11 +77,11 @@ NO_INLINE void gaussian_blur(
                 for (int kj = -radius; kj <= radius; kj++) {
                     if (i + ki >= 0 && j + kj >= 0 && j + kj < width) {
                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-                        cell_sum  += input[(i + ki)*width+(j + kj)] * w;
+                        cell_sum  += input[(i + ki) * width + (j + kj)] * w;
                         weight_sum += w;
                     }
                 }
-            output[i*width+j] = (uint8_t)(cell_sum / weight_sum);
+            output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
     // Bottom
         for (int i = height - radius; i < height; i++) {
@@ -90,11 +90,11 @@ NO_INLINE void gaussian_blur(
                 for (int kj = -radius; kj <= radius; kj++) {
                     if (i + ki < height && j + kj >= 0 && j + kj < width) {
                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-                        cell_sum  += input[(i + ki)*width+(j + kj)] * w;
+                        cell_sum  += input[(i + ki) * width + (j + kj)] * w;
                         weight_sum += w;
                     }
                 }
-            output[i*width+j] = (uint8_t)(cell_sum / weight_sum);
+            output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
     }
 
@@ -104,20 +104,20 @@ NO_INLINE void gaussian_blur(
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int ki = -radius; ki <= radius; ki++)
                 for (int kj = -radius; kj <= radius; kj++) {
-                    if (j + kj >= 0 && j + kj < width) {
+                    if (j + kj >= 0) {
                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-                        cell_sum  += input[(i + ki)*width+(j + kj)] * w;
+                        cell_sum  += input[(i + ki) * width + (j + kj)] * w;
                         weight_sum += w;
                     }
                 }
-            output[i*width+j] = (uint8_t)(cell_sum / weight_sum);
+            output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
     // Right
         for (int j = width - radius; j < width; j++) {
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int ki = -radius; ki <= radius; ki++)
                 for (int kj = -radius; kj <= radius; kj++) {
-                    if (j + kj >= 0 && j + kj < width) {
+                    if (j + kj < width) {
                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
                         cell_sum  += input[(i + ki) * width + (j + kj)] * w;
                         weight_sum += w;
