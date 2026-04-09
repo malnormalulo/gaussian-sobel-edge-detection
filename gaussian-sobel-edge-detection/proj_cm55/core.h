@@ -18,11 +18,9 @@ NO_INLINE void gaussian_blur(
     int height, 
     int width,
     uint8_t input[height * width], 
-    uint8_t output[height * width],
-    int kernel_size, 
-    float kernel[kernel_size][kernel_size]
+    uint8_t output[height * width]
 ) {
-    const int radius = kernel_size / 2;
+    const int radius = GBLUR_KERNEL_SIZE / 2;
 
     for (int i = 0; i < height; i++)
         for (int j = 0; j < width; j++) {
@@ -31,7 +29,7 @@ NO_INLINE void gaussian_blur(
             for (int ki = -radius; ki < radius + 1; ki++)
                 for (int kj = -radius; kj < radius + 1; kj++) {
                     if (i + ki >= 0 && i + ki < height && j + kj >= 0 && j + kj < width) {
-                        float w = kernel[ki + radius][kj + radius];
+                        float w = gaussian_kernel[ki + radius][kj + radius];
                         cell_sum   += (float)input[(i + ki) * width + (j + kj)] * w;
                         weight_sum += w;
                     }
