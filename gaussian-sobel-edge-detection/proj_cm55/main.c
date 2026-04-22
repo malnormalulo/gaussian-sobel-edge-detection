@@ -62,13 +62,13 @@ CY_SECTION(".cy_itcm") int main(void)
 
     init_retarget_io();
     perf_counter_init();
-    printf("Init finished\n");
-    printf("SystemCoreClock: %lu Hz (%.2f MHz)\n\n", SystemCoreClock, SystemCoreClock / 1000000.0);
+    // printf("Init finished\n");
+    // printf("SystemCoreClock: %lu Hz (%.2f MHz)\n\n", SystemCoreClock, SystemCoreClock / 1000000.0);
 
     size_t size = IN_HEIGHT * IN_WIDTH;
 
     fill_gaussian_blur_kernel();
-    print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
+    // print_2D_float_array(GBLUR_KERNEL_SIZE, GBLUR_KERNEL_SIZE, gaussian_kernel);
 
     mac = size * 3;
     uint8_t *actual_out_monochrome = malloc(size * sizeof(uint8_t));

@@ -1,4 +1,5 @@
 #include "core_shared.h"
+#include "math.h"
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
@@ -83,7 +84,7 @@ NO_INLINE void sobel_edge_detection(
                 }
             }
 
-            float mag = sqrtf(sumx * sumx + sumy * sumy);
+            float mag = fabsf(sumx) + fabsf(sumy);
             output[i * width + j] = (uint8_t)(
                 mag > 255.f
                     ? 255.f
