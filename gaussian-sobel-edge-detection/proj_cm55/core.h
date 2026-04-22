@@ -37,103 +37,115 @@ NO_INLINE void convert_to_monochrome(
             (float)0.11 * in_image[i*3 + 2]);
 }
 
-// CY_SECTION(".cy_itcm")
-// NO_INLINE void gaussian_blur(
-//     size_t height, 
-//     size_t width,
-//     uint8_t input[height * width], 
-//     uint8_t output[height * width]
-// ) {
-//     const int radius = GBLUR_KERNEL_SIZE / 2;
+CY_SECTION(".cy_itcm")
+NO_INLINE void gaussian_blur(
+    size_t height, 
+    size_t width,
+    uint8_t input[height * width], 
+    uint8_t output[height * width]
+) {
+    const int radius = GBLUR_KERNEL_SIZE / 2;
 
-//     // center
-//     for (int i = radius; i < height - radius; i++) {
-//         int j = radius;
+    uint8_t *temp = malloc(height * width * sizeof(uint8_t));
 
-//         for (; j <= (int)(width - radius) - 8; j += 8) {
-//             uint16x8_t acc = vdupq_n_u16(0);
+    // Horizontal
+    for (int i = 0; i < height; i++) {
+        // center
+        int j = radius;
+        for (; j <= width - radius - 8; j += 8) {
+            uint16x8_t acc = vdupq_n_u16(0);
+            for (int kj = -radius; kj <= radius; kj++) {
+                uint16x8_t v16 = vldrbq_u16(&input[i * width + j + kj]);
+                acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[kj + radius]);
+            }
+            vstrbq_u16(&temp[i * width + j], vshrq_n_u16(acc, 8));
+        }
+        // center tail
+        for (; j < (width - radius); j++) {
+            uint16_t cell_sum = 0;
+            for (int kj = -radius; kj <= radius; kj++)
+                cell_sum += input[i * width + j + kj] * gaussian_kernel[kj + radius];
+            temp[i * width + j] = (uint8_t)(cell_sum >> 8);
+        }
 
-//             for (int ki = -radius; ki <= radius; ki++) {
-//                 for (int kj = -radius; kj <= radius; kj++) {
-//                     uint16x8_t v16 = vldrbq_u16(
-//                         &input[(i + ki) * width + (j + kj)]
-//                     );
-//                     uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-//                     acc = vmlaq_n_u16(acc, v16, (uint16_t)w);
-//                 }
-//             }
+        // left edge
+        for (j = 0; j < radius; j++) {
+            uint16_t cell_sum = 0, weight_sum = 0;
+            for (int kj = -radius; kj <= radius; kj++) {
+                if (j + kj >= 0) {
+                    uint8_t w = gaussian_kernel[kj + radius];
+                    cell_sum  += input[i * width + j + kj] * w;
+                    weight_sum += w;
+                }
+            }
+            temp[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+        }
+        // right edge
+        for (j = (width - radius); j < width; j++) {
+            uint16_t cell_sum = 0, weight_sum = 0;
+            for (int kj = -radius; kj <= radius; kj++) {
+                if (j + kj < width) {
+                    uint8_t w = gaussian_kernel[kj + radius];
+                    cell_sum  += input[i * width + j + kj] * w;
+                    weight_sum += w;
+                }
+            }
+            temp[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+        }
+    }
 
-//             vstrbq_u16(&output[i * width + j], vshrq_n_u16(acc, 8));
-//         }
+    // Vertical
+    // center
+    for (int i = radius; i < height - radius; i++) {
+        int j = 0;
+        for (; j <= width - 8; j += 8) {
+            uint16x8_t acc = vdupq_n_u16(0);
+            for (int ki = -radius; ki <= radius; ki++) {
+                uint16x8_t v16 = vldrbq_u16(&temp[(i + ki) * width + j]);
+                acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[ki + radius]);
+            }
+            vstrbq_u16(&output[i * width + j], vshrq_n_u16(acc, 8));
+        }
+        // center tail
+        for (; j < width; j++) {
+            uint16_t cell_sum = 0;
+            for (int ki = -radius; ki <= radius; ki++)
+                cell_sum += temp[(i + ki) * width + j] * gaussian_kernel[ki + radius];
+            output[i * width + j] = (uint8_t)(cell_sum >> 8);
+        }
+    }
 
-//         for (; j < width - radius; j++) {
-//             uint16_t cell_sum = 0;
-//             for (int ki = -radius; ki <= radius; ki++)
-//                 for (int kj = -radius; kj <= radius; kj++)
-//                     cell_sum += input[(i + ki) * width + (j + kj)] * gaussian_kernel[ki + radius][kj + radius];
-//             output[i * width + j] = (uint8_t)(cell_sum >> 8);
-//         }
-//     }
-    
-//     // edges
-//     for (int j = 0; j < width; j++) {
-//     // Top
-//         for (int i = 0; i < radius; i++) {
-//             uint16_t cell_sum = 0, weight_sum = 0;
-//             for (int ki = -radius; ki <= radius; ki++)
-//                 for (int kj = -radius; kj <= radius; kj++) {
-//                     if (i + ki >= 0 && j + kj >= 0 && j + kj < width) {
-//                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-//                         cell_sum  += input[(i + ki) * width + (j + kj)] * w;
-//                         weight_sum += w;
-//                     }
-//                 }
-//             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
-//         }
-//     // Bottom
-//         for (int i = height - radius; i < height; i++) {
-//             uint16_t cell_sum = 0, weight_sum = 0;
-//             for (int ki = -radius; ki <= radius; ki++)
-//                 for (int kj = -radius; kj <= radius; kj++) {
-//                     if (i + ki < height && j + kj >= 0 && j + kj < width) {
-//                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-//                         cell_sum  += input[(i + ki) * width + (j + kj)] * w;
-//                         weight_sum += w;
-//                     }
-//                 }
-//             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
-//         }
-//     }
+    // top edge
+    for (int i = 0; i < radius; i++) {
+        for (int j = 0; j < width; j++) {
+            uint16_t cell_sum = 0, weight_sum = 0;
+            for (int ki = -radius; ki <= radius; ki++) {
+                if (i + ki >= 0) {
+                    uint8_t w = gaussian_kernel[ki + radius];
+                    cell_sum  += temp[(i + ki) * width + j] * w;
+                    weight_sum += w;
+                }
+            }
+            output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+        }
+    }
+    // bottom edge
+    for (int i = height - radius; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            uint16_t cell_sum = 0, weight_sum = 0;
+            for (int ki = -radius; ki <= radius; ki++) {
+                if (i + ki < height) {
+                    uint8_t w = gaussian_kernel[ki + radius];
+                    cell_sum  += temp[(i + ki) * width + j] * w;
+                    weight_sum += w;
+                }
+            }
+            output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+        }
+    }
 
-//     for (int i = radius; i < height - radius; i++) {
-//     // Left
-//         for (int j = 0; j < radius; j++) {
-//             uint16_t cell_sum = 0, weight_sum = 0;
-//             for (int ki = -radius; ki <= radius; ki++)
-//                 for (int kj = -radius; kj <= radius; kj++) {
-//                     if (j + kj >= 0) {
-//                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-//                         cell_sum  += input[(i + ki) * width + (j + kj)] * w;
-//                         weight_sum += w;
-//                     }
-//                 }
-//             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
-//         }
-//     // Right
-//         for (int j = width - radius; j < width; j++) {
-//             uint16_t cell_sum = 0, weight_sum = 0;
-//             for (int ki = -radius; ki <= radius; ki++)
-//                 for (int kj = -radius; kj <= radius; kj++) {
-//                     if (j + kj < width) {
-//                         uint8_t w = gaussian_kernel[ki + radius][kj + radius];
-//                         cell_sum  += input[(i + ki) * width + (j + kj)] * w;
-//                         weight_sum += w;
-//                     }
-//                 }
-//             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
-//         }
-//     }
-// }
+    free(temp);
+}
 
 
 static const int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
