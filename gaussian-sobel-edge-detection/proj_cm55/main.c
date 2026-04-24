@@ -77,10 +77,12 @@ CY_SECTION(".cy_itcm") int main(void)
 
     mac = GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size;
     uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
+    uint8_t *buffer = malloc(size * sizeof(uint8_t));
     perf_counter_start();
-    gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
+    gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur, buffer);
     res = perf_counter_stop();
     print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
+    free(buffer);
     free(actual_out_monochrome);
 
     // mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;

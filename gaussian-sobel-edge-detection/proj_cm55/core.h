@@ -42,11 +42,10 @@ NO_INLINE void gaussian_blur(
     size_t height, 
     size_t width,
     uint8_t input[height * width], 
-    uint8_t output[height * width]
+    uint8_t output[height * width],
+    uint8_t buffer[height * width]
 ) {
     const int radius = GBLUR_KERNEL_SIZE / 2;
-
-    uint8_t *temp = malloc(height * width * sizeof(uint8_t));
 
     // Horizontal
     for (int i = 0; i < height; i++) {
@@ -58,14 +57,14 @@ NO_INLINE void gaussian_blur(
                 uint16x8_t v16 = vldrbq_u16(&input[i * width + j + kj]);
                 acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[kj + radius]);
             }
-            vstrbq_u16(&temp[i * width + j], vshrq_n_u16(acc, 8));
+            vstrbq_u16(&buffer[i * width + j], vshrq_n_u16(acc, 8));
         }
         // center tail
         for (; j < (width - radius); j++) {
             uint16_t cell_sum = 0;
             for (int kj = -radius; kj <= radius; kj++)
                 cell_sum += input[i * width + j + kj] * gaussian_kernel[kj + radius];
-            temp[i * width + j] = (uint8_t)(cell_sum >> 8);
+            buffer[i * width + j] = (uint8_t)(cell_sum >> 8);
         }
 
         // left edge
@@ -78,7 +77,7 @@ NO_INLINE void gaussian_blur(
                     weight_sum += w;
                 }
             }
-            temp[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+            buffer[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
         // right edge
         for (j = (width - radius); j < width; j++) {
@@ -90,7 +89,7 @@ NO_INLINE void gaussian_blur(
                     weight_sum += w;
                 }
             }
-            temp[i * width + j] = (uint8_t)(cell_sum / weight_sum);
+            buffer[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
     }
 
@@ -101,7 +100,7 @@ NO_INLINE void gaussian_blur(
         for (; j <= width - 8; j += 8) {
             uint16x8_t acc = vdupq_n_u16(0);
             for (int ki = -radius; ki <= radius; ki++) {
-                uint16x8_t v16 = vldrbq_u16(&temp[(i + ki) * width + j]);
+                uint16x8_t v16 = vldrbq_u16(&buffer[(i + ki) * width + j]);
                 acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[ki + radius]);
             }
             vstrbq_u16(&output[i * width + j], vshrq_n_u16(acc, 8));
@@ -110,7 +109,7 @@ NO_INLINE void gaussian_blur(
         for (; j < width; j++) {
             uint16_t cell_sum = 0;
             for (int ki = -radius; ki <= radius; ki++)
-                cell_sum += temp[(i + ki) * width + j] * gaussian_kernel[ki + radius];
+                cell_sum += buffer[(i + ki) * width + j] * gaussian_kernel[ki + radius];
             output[i * width + j] = (uint8_t)(cell_sum >> 8);
         }
     }
@@ -122,7 +121,7 @@ NO_INLINE void gaussian_blur(
             for (int ki = -radius; ki <= radius; ki++) {
                 if (i + ki >= 0) {
                     uint8_t w = gaussian_kernel[ki + radius];
-                    cell_sum  += temp[(i + ki) * width + j] * w;
+                    cell_sum  += buffer[(i + ki) * width + j] * w;
                     weight_sum += w;
                 }
             }
@@ -136,15 +135,13 @@ NO_INLINE void gaussian_blur(
             for (int ki = -radius; ki <= radius; ki++) {
                 if (i + ki < height) {
                     uint8_t w = gaussian_kernel[ki + radius];
-                    cell_sum  += temp[(i + ki) * width + j] * w;
+                    cell_sum  += buffer[(i + ki) * width + j] * w;
                     weight_sum += w;
                 }
             }
             output[i * width + j] = (uint8_t)(cell_sum / weight_sum);
         }
     }
-
-    free(temp);
 }
 
 
