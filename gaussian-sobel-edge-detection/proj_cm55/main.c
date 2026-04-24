@@ -75,14 +75,14 @@ CY_SECTION(".cy_itcm") int main(void)
     perf_counter_start();
     convert_to_monochrome(size, input_image, actual_out_monochrome);
     res = perf_counter_stop();
-    print_summary("\nmonochrome", actual_out_monochrome, out_monochrome, size, mac, res);
+    // print_summary("\nmonochrome", actual_out_monochrome, out_monochrome, size, mac, res);
 
     mac = GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size;
     uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
     perf_counter_start();
     gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
     res = perf_counter_stop();
-    print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
+    // print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, size, mac, res);
     free(actual_out_monochrome);
 
     mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;

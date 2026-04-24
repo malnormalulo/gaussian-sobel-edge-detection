@@ -1,5 +1,4 @@
 #include "core_shared.h"
-#include "math.h"
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
@@ -62,8 +61,8 @@ NO_INLINE void sobel_edge_detection(
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            float sumx = 0.f;
-            float sumy = 0.f;
+            int sumx = 0;
+            int sumy = 0;
 
             for (int ki = -radius; ki <= radius; ki++) {
                 for (int kj = -radius; kj <= radius; kj++) {
@@ -78,18 +77,18 @@ NO_INLINE void sobel_edge_detection(
                             ? width  - 1
                             : j + kj;
 
-                    const float px = input[ci * width + cj];
-                    sumx += px * G_x[ki + radius][kj + radius];
-                    sumy += px * G_y[ki + radius][kj + radius];
+                    const uint8_t px = input[ci * width + cj];
+                    sumx += G_x[ki + radius][kj + radius] * px;
+                    sumy += G_y[ki + radius][kj + radius] * px;
                 }
             }
 
-            float mag = fabsf(sumx) + fabsf(sumy);
+            int mag = abs(sumx) + abs(sumy);
             output[i * width + j] = (uint8_t)(
-                mag > 255.f
-                    ? 255.f
+                mag > 255
+                    ? 255
                     : mag < THRESHOLD
-                        ? 0.f
+                        ? 0
                         : mag
                 );
         }
