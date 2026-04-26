@@ -64,11 +64,20 @@ NO_INLINE int separable_sobel_kernel(
     // Horizontal
     for (int i = 0; i < height; i++) {
         // center
-        for (int j = radius; j < width - radius; j++) {
-            int16_t acc = 0;
+        int j = radius;
+        for (; j <= width - radius - 8; j += 8) {
+            int16x8_t acc = vdupq_n_s16(0);
             for (int kj = -radius; kj <= radius; kj++) {
-                acc += input[i * width + j + kj] * hor_m[kj + radius];
+                int16x8_t v16 = vreinterpretq_s16_u16(vldrbq_u16(&input[i * width + j + kj]));
+                acc = vmlaq_n_s16(acc, v16, (int16_t)hor_m[kj + radius]);
             }
+            vstrhq_s16(&buffer[i * width + j], acc);
+        }
+        // center tail
+        for (; j < width - radius; j++) {
+            int16_t acc = 0;
+            for (int kj = -radius; kj <= radius; kj++)
+                acc += input[i * width + j + kj] * hor_m[kj + radius];
             buffer[i * width + j] = acc;
         }
 
@@ -103,11 +112,21 @@ NO_INLINE int separable_sobel_kernel(
     // Vertical
     // center
     for (int i = radius; i < height - radius; i++) {
-        for (int j = 0; j < width; j++) {
-            int16_t acc = 0;
+        int j = 0;
+        for (; j <= width - 8; j += 8) {
+            int16x8_t acc = vdupq_n_s16(0);
             for (int ki = -radius; ki <= radius; ki++) {
-                acc += buffer[(i + ki) * width + j] * ver_m[ki + radius];
+                int16x8_t v16 = vldrhq_s16(&buffer[(i + ki) * width + j]);
+                acc = vmlaq_n_s16(acc, v16, (int16_t)ver_m[ki + radius]);
             }
+            acc = vabsq_s16(acc);
+            vstrhq_s16(&output[i * width + j], acc);
+            sum += vaddvq_s16(acc);
+        }
+        for (; j < width; j++) {
+            int16_t acc = 0;
+            for (int ki = -radius; ki <= radius; ki++)
+                acc += buffer[(i + ki) * width + j] * ver_m[ki + radius];
             acc = abs(acc);
             output[i * width + j] = acc;
             sum += acc;
@@ -167,19 +186,30 @@ NO_INLINE void sobel_edge_detection(
 
     const int threshold = (SUMX + SUMY) / (2 * height * width);
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int16_t sumx = G_x[i * width + j];
-            int16_t sumy = G_y[i * width + j];
+    int16x8_t v16x255 = vdupq_n_s16(255);
+    int16x8_t v16x0 = vdupq_n_s16(0);
+    int16x8_t v16xthreshold = vdupq_n_s16((int16_t)threshold);
 
-            int16_t mag = sumx + sumy;
+    for (int i = 0; i < height; i++) {
+        int j = 0;
+        for (; j <= width - 8; j += 8) {
+            int16x8_t mag = vaddq_s16(
+                vldrhq_s16(&G_x[i * width + j]),
+                vldrhq_s16(&G_y[i * width + j])
+            );
+            mag = vminq_s16(mag, v16x255);
+            mag = vpselq_s16(mag, v16x0, vcmpgeq_s16(mag, v16xthreshold));
+            vstrbq_u16(&output[i * width + j], vreinterpretq_u16_s16(mag));
+        }
+        for (; j < width; j++) {
+            int16_t mag = G_x[i * width + j] + G_y[i * width + j];
             output[i * width + j] = (uint8_t)(
-                mag > 255
-                    ? 255
-                    : mag < threshold
-                        ? 0
+                mag > 255 
+                    ? 255 
+                    : mag < threshold 
+                        ? 0 
                         : mag
-                );
+            );
         }
     }
 }

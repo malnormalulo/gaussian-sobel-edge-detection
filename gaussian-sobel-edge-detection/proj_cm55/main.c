@@ -111,7 +111,7 @@ CY_SECTION(".cy_itcm") int main(void)
     // perf_counter_start();
     // convert_to_monochrome(size, input_image, actual_out_monochrome);
     // gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
-    // sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
+    // sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel, G_x, G_y, sobel_buffer);
     // res = perf_counter_stop();
 
     // print_summary("full sobel edge pipeline", actual_out_sobel, out_sobel_edge, size, mac, res);
