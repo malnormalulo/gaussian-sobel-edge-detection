@@ -87,17 +87,26 @@ CY_SECTION(".cy_itcm") int main(void)
 
     mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;
     uint8_t *actual_out_sobel = malloc(size * sizeof(uint8_t));
+    int16_t *G_x = malloc(size * sizeof(int16_t));
+    int16_t *G_y = malloc(size * sizeof(int16_t));
+    int16_t *sobel_buffer = malloc(size * sizeof(int16_t));
     perf_counter_start();
-    sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
+    sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel, G_x, G_y, sobel_buffer);
     res = perf_counter_stop();
     print_summary("sobel edge", actual_out_sobel, out_sobel_edge, size, mac, res);
     free(actual_out_monochrome);
     free(actual_out_sobel);
+    free(G_x);
+    free(G_y);
+    free(sobel_buffer);
 
     // mac = size*3 + GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*size + SED_KERNEL_SIZE*SED_KERNEL_SIZE*size;
     // uint8_t *actual_out_monochrome = malloc(size * sizeof(uint8_t));
     // uint8_t *actual_out_gaussian_blur = malloc(size * sizeof(uint8_t));
     // uint8_t *actual_out_sobel = malloc(size * sizeof(uint8_t));
+    // int16_t *G_x = malloc(size * sizeof(int16_t));
+    // int16_t *G_y = malloc(size * sizeof(int16_t));
+    // int16_t *sobel_buffer = malloc(size * sizeof(int16_t));
 
     // perf_counter_start();
     // convert_to_monochrome(size, input_image, actual_out_monochrome);
@@ -110,6 +119,9 @@ CY_SECTION(".cy_itcm") int main(void)
     // free(actual_out_monochrome);
     // free(actual_out_monochrome);
     // free(actual_out_sobel);
+    // free(G_x);
+    // free(G_y);
+    // free(sobel_buffer);
     
     while(1) {
     }
