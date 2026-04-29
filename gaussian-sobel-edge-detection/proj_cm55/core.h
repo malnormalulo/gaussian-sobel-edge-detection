@@ -2,22 +2,22 @@
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
-    size_t size, 
-    const uint8_t* in_image, 
-    uint8_t* out_image
+    const size_t size, 
+    const uint8_t * restrict in_image, 
+    uint8_t * out_image
 ) {
     uint32_t block_count = size / 8; 
     uint32_t tail_count = size % 8;
 
     // offsets for every 3rd byte
     static const uint16_t offsets[8] = {0, 3, 6, 9, 12, 15, 18, 21};
-    uint16x8_t v_offsets = vld1q_u16(offsets);
+    const uint16x8_t v_offsets = vld1q_u16(offsets);
 
     while (block_count > 0) {
         // Gather load to form channels arrays for every pixel
-        uint16x8_t r = vldrbq_gather_offset_u16(in_image, v_offsets);
-        uint16x8_t g = vldrbq_gather_offset_u16(in_image + 1, v_offsets);
-        uint16x8_t b = vldrbq_gather_offset_u16(in_image + 2, v_offsets);
+        const uint16x8_t r = vldrbq_gather_offset_u16(in_image, v_offsets);
+        const uint16x8_t g = vldrbq_gather_offset_u16(in_image + 1, v_offsets);
+        const uint16x8_t b = vldrbq_gather_offset_u16(in_image + 2, v_offsets);
 
         // calculation
         uint16x8_t y = vmulq_n_u16(r, 77);
@@ -36,12 +36,12 @@ NO_INLINE void convert_to_monochrome(
     }
 
     if (tail_count > 0) {
-        mve_pred16_t p = vctp16q(tail_count);
+        const mve_pred16_t p = vctp16q(tail_count);
         
         // Gather Loads with mask (zeroing)
-        uint16x8_t r = vldrbq_gather_offset_z_u16(in_image, v_offsets, p);
-        uint16x8_t g = vldrbq_gather_offset_z_u16(in_image + 1, v_offsets, p);
-        uint16x8_t b = vldrbq_gather_offset_z_u16(in_image + 2, v_offsets, p);
+        const uint16x8_t r = vldrbq_gather_offset_z_u16(in_image, v_offsets, p);
+        const uint16x8_t g = vldrbq_gather_offset_z_u16(in_image + 1, v_offsets, p);
+        const uint16x8_t b = vldrbq_gather_offset_z_u16(in_image + 2, v_offsets, p);
         
         uint16x8_t y = vmulq_n_u16(r, 77);
         y = vmlaq_n_u16(y, g, 151);
