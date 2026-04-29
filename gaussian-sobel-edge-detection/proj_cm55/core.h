@@ -27,8 +27,8 @@ void print_gaussian_kernel() {
 CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
     size_t size, 
-    const uint8_t* in_image, 
-    uint8_t* out_image
+    const uint8_t * in_image, 
+    uint8_t * out_image
 ) {
     for (size_t i = 0; i < size; i++)
         out_image[i] = (uint8_t)(
@@ -39,9 +39,9 @@ NO_INLINE void convert_to_monochrome(
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void gaussian_blur(
-    size_t height, 
-    size_t width,
-    uint8_t input[height * width], 
+    const size_t height, 
+    const size_t width,
+    uint8_t * restrict input, 
     uint8_t output[height * width],
     uint8_t buffer[height * width]
 ) {
@@ -54,7 +54,7 @@ NO_INLINE void gaussian_blur(
         for (; j <= width - radius - 8; j += 8) {
             uint16x8_t acc = vdupq_n_u16(0);
             for (int kj = -radius; kj <= radius; kj++) {
-                uint16x8_t v16 = vldrbq_u16(&input[i * width + j + kj]);
+                const uint16x8_t v16 = vldrbq_u16(&input[i * width + j + kj]);
                 acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[kj + radius]);
             }
             vstrbq_u16(&buffer[i * width + j], vshrq_n_u16(acc, 8));
@@ -72,7 +72,7 @@ NO_INLINE void gaussian_blur(
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int kj = -radius; kj <= radius; kj++) {
                 if (j + kj >= 0) {
-                    uint8_t w = gaussian_kernel[kj + radius];
+                    const uint8_t w = gaussian_kernel[kj + radius];
                     cell_sum  += input[i * width + j + kj] * w;
                     weight_sum += w;
                 }
@@ -84,7 +84,7 @@ NO_INLINE void gaussian_blur(
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int kj = -radius; kj <= radius; kj++) {
                 if (j + kj < width) {
-                    uint8_t w = gaussian_kernel[kj + radius];
+                    const uint8_t w = gaussian_kernel[kj + radius];
                     cell_sum  += input[i * width + j + kj] * w;
                     weight_sum += w;
                 }
@@ -100,7 +100,7 @@ NO_INLINE void gaussian_blur(
         for (; j <= width - 8; j += 8) {
             uint16x8_t acc = vdupq_n_u16(0);
             for (int ki = -radius; ki <= radius; ki++) {
-                uint16x8_t v16 = vldrbq_u16(&buffer[(i + ki) * width + j]);
+                const uint16x8_t v16 = vldrbq_u16(&buffer[(i + ki) * width + j]);
                 acc = vmlaq_n_u16(acc, v16, (uint16_t)gaussian_kernel[ki + radius]);
             }
             vstrbq_u16(&output[i * width + j], vshrq_n_u16(acc, 8));
@@ -120,7 +120,7 @@ NO_INLINE void gaussian_blur(
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int ki = -radius; ki <= radius; ki++) {
                 if (i + ki >= 0) {
-                    uint8_t w = gaussian_kernel[ki + radius];
+                    const uint8_t w = gaussian_kernel[ki + radius];
                     cell_sum  += buffer[(i + ki) * width + j] * w;
                     weight_sum += w;
                 }
@@ -134,7 +134,7 @@ NO_INLINE void gaussian_blur(
             uint16_t cell_sum = 0, weight_sum = 0;
             for (int ki = -radius; ki <= radius; ki++) {
                 if (i + ki < height) {
-                    uint8_t w = gaussian_kernel[ki + radius];
+                    const uint8_t w = gaussian_kernel[ki + radius];
                     cell_sum  += buffer[(i + ki) * width + j] * w;
                     weight_sum += w;
                 }
