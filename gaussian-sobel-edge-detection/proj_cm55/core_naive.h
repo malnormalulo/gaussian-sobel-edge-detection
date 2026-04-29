@@ -1,5 +1,38 @@
 #include "core_shared.h"
 
+static float gaussian_kernel [GBLUR_KERNEL_SIZE][GBLUR_KERNEL_SIZE];
+
+NO_INLINE void fill_gaussian_blur_kernel() {
+    const int r = GBLUR_KERNEL_SIZE / 2;  // radius
+    float sum = 0.f;
+
+    for (int i = 0; i < GBLUR_KERNEL_SIZE; i++) {
+        for (int j = 0; j < GBLUR_KERNEL_SIZE; j++) {
+            const int x = i - r;  // offset from center
+            const int y = j - r;
+
+            gaussian_kernel[i][j] = exp(-(x*x + y*y) / (2.0 * SIGMA * SIGMA))
+                           / (2.0 * M_PI * SIGMA * SIGMA);
+            sum += gaussian_kernel[i][j];
+        }
+    }
+
+    // normalization
+    for (int i = 0; i < GBLUR_KERNEL_SIZE; i++)
+        for (int j = 0; j < GBLUR_KERNEL_SIZE; j++)
+            gaussian_kernel[i][j] /= sum;
+}
+
+void print_gaussian_kernel() {
+    for (int i=0; i < GBLUR_KERNEL_SIZE; i++) {
+        printf("[");
+        for (int j=0; j < GBLUR_KERNEL_SIZE; j++) {
+            printf("%.3f%s", gaussian_kernel[i][j], j < GBLUR_KERNEL_SIZE - 1 ? ", " : "");
+        }
+        printf("]\n");
+    }
+}
+
 CY_SECTION(".cy_itcm")
 NO_INLINE void convert_to_monochrome(
     size_t size, 
