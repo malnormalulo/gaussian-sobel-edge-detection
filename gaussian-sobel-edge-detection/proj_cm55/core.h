@@ -47,9 +47,9 @@ static const int16_t G_m2 [SED_KERNEL_SIZE] = {-1, 0, 1};
 
 CY_SECTION(".cy_itcm")
 NO_INLINE int separable_sobel_kernel(
-    int height,
-    int width,
-    uint8_t input[height * width],
+    const int height,
+    const int width,
+    uint8_t * restrict input,
     int16_t output[height * width],
     bool isG_x,
     int16_t buffer[height * width]
@@ -173,9 +173,9 @@ NO_INLINE int separable_sobel_kernel(
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void sobel_edge_detection(
-    int height,
-    int width,
-    uint8_t input[height * width],
+    const int height,
+    const int width,
+    uint8_t * restrict input,
     uint8_t output[height * width],
     int16_t G_x[height * width],
     int16_t G_y[height * width],
@@ -186,9 +186,9 @@ NO_INLINE void sobel_edge_detection(
 
     const int threshold = (SUMX + SUMY) / (2 * height * width);
 
-    int16x8_t v16x255 = vdupq_n_s16(255);
-    int16x8_t v16x0 = vdupq_n_s16(0);
-    int16x8_t v16xthreshold = vdupq_n_s16((int16_t)threshold);
+    const int16x8_t v16x255 = vdupq_n_s16(255);
+    const int16x8_t v16x0 = vdupq_n_s16(0);
+    const int16x8_t v16xthreshold = vdupq_n_s16((int16_t)threshold);
 
     for (int i = 0; i < height; i++) {
         int j = 0;
@@ -202,7 +202,7 @@ NO_INLINE void sobel_edge_detection(
             vstrbq_u16(&output[i * width + j], vreinterpretq_u16_s16(mag));
         }
         for (; j < width; j++) {
-            int16_t mag = G_x[i * width + j] + G_y[i * width + j];
+            const int16_t mag = G_x[i * width + j] + G_y[i * width + j];
             output[i * width + j] = (uint8_t)(
                 mag > 255 
                     ? 255 
