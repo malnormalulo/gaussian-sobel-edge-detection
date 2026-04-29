@@ -72,6 +72,8 @@ NO_INLINE void gaussian_blur(
 }
 
 
+#define THRESHOLD 25.f
+
 static const int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
     {-1, 0, 1},
     {-2, 0, 2},

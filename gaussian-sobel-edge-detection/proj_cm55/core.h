@@ -185,58 +185,177 @@ NO_INLINE void gaussian_blur(
 }
 
 
-static const int G_x [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
-    {-1, 0, 1},
-    {-2, 0, 2},
-    {-1, 0, 1}
-};
-static const int G_y [SED_KERNEL_SIZE][SED_KERNEL_SIZE] = {
-    {-1, -2, -1},
-    { 0,  0,  0},
-    { 1,  2,  1}
-};
+static const int16_t G_m1 [SED_KERNEL_SIZE] = {1, 2, 1};
+static const int16_t G_m2 [SED_KERNEL_SIZE] = {-1, 0, 1};
+
+// G_x = G_m1 * G_m2
+// G_y = G_m2 * G_m1
 
 CY_SECTION(".cy_itcm")
-NO_INLINE void sobel_edge_detection(
-    int height,
-    int width,
-    uint8_t input[height * width],
-    uint8_t output[height * width]
+NO_INLINE int separable_sobel_kernel(
+    const int height,
+    const int width,
+    uint8_t * restrict input,
+    int16_t output[height * width],
+    bool isG_x,
+    int16_t buffer[height * width]
 ) {
     const int radius = SED_KERNEL_SIZE / 2;
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            float sumx = 0.f;
-            float sumy = 0.f;
+    const int16_t *hor_m = isG_x ? G_m1 : G_m2;
+    const int16_t *ver_m = isG_x ? G_m2 : G_m1;
 
-            for (int ki = -radius; ki <= radius; ki++) {
-                for (int kj = -radius; kj <= radius; kj++) {
-                    const int ci = i + ki < 0
-                        ? 0
-                        : i + ki >= height
-                            ? height - 1
-                            : i + ki;
-                    const int cj = j + kj < 0
+    int sum = 0;
+
+    // Horizontal
+    for (int i = 0; i < height; i++) {
+        // center
+        int j = radius;
+        for (; j <= width - radius - 8; j += 8) {
+            int16x8_t acc = vdupq_n_s16(0);
+            for (int kj = -radius; kj <= radius; kj++) {
+                int16x8_t v16 = vreinterpretq_s16_u16(vldrbq_u16(&input[i * width + j + kj]));
+                acc = vmlaq_n_s16(acc, v16, (int16_t)hor_m[kj + radius]);
+            }
+            vstrhq_s16(&buffer[i * width + j], acc);
+        }
+        // center tail
+        for (; j < width - radius; j++) {
+            int16_t acc = 0;
+            for (int kj = -radius; kj <= radius; kj++)
+                acc += input[i * width + j + kj] * hor_m[kj + radius];
+            buffer[i * width + j] = acc;
+        }
+
+        // left edge
+        for (int j = 0; j < radius; j++) {
+            int16_t acc = 0;
+            for (int kj = -radius; kj <= radius; kj++) {
+                const int cj = j + kj < 0
                         ? 0
                         : j + kj >= width
                             ? width  - 1
                             : j + kj;
-
-                    const float px = input[ci * width + cj];
-                    sumx += px * G_x[ki + radius][kj + radius];
-                    sumy += px * G_y[ki + radius][kj + radius];
-                }
+                acc += input[i * width + cj] * hor_m[kj + radius];
             }
+            buffer[i * width + j] = acc;
+        }
+        // right edge
+        for (int j = (width - radius); j < width; j++) {
+            int16_t acc = 0;
+            for (int kj = -radius; kj <= radius; kj++) {
+                const int cj = j + kj < 0
+                        ? 0
+                        : j + kj >= width
+                            ? width  - 1
+                            : j + kj;
+                acc += input[i * width + cj] * hor_m[kj + radius];
+            }
+            buffer[i * width + j] = acc;
+        }
+    }
 
-            float mag = sqrtf(sumx * sumx + sumy * sumy);
+    // Vertical
+    // center
+    for (int i = radius; i < height - radius; i++) {
+        int j = 0;
+        for (; j <= width - 8; j += 8) {
+            int16x8_t acc = vdupq_n_s16(0);
+            for (int ki = -radius; ki <= radius; ki++) {
+                int16x8_t v16 = vldrhq_s16(&buffer[(i + ki) * width + j]);
+                acc = vmlaq_n_s16(acc, v16, (int16_t)ver_m[ki + radius]);
+            }
+            acc = vabsq_s16(acc);
+            vstrhq_s16(&output[i * width + j], acc);
+            sum += vaddvq_s16(acc);
+        }
+        for (; j < width; j++) {
+            int16_t acc = 0;
+            for (int ki = -radius; ki <= radius; ki++)
+                acc += buffer[(i + ki) * width + j] * ver_m[ki + radius];
+            acc = abs(acc);
+            output[i * width + j] = acc;
+            sum += acc;
+        }
+    }
+
+    // top edge
+    for (int i = 0; i < radius; i++) {
+        for (int j = 0; j < width; j++) {
+            int16_t acc = 0;
+            for (int ki = -radius; ki <= radius; ki++) {
+                const int ci = i + ki < 0
+                        ? 0
+                        : i + ki >= height
+                            ? height - 1
+                            : i + ki;
+                acc += buffer[ci * width + j] * ver_m[ki + radius];
+            }
+            acc = abs(acc);
+            output[i * width + j] = acc;
+            sum += acc;
+        }
+    }
+    // bottom edge
+    for (int i = height - radius; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int16_t acc = 0;
+            for (int ki = -radius; ki <= radius; ki++) {
+                const int ci = i + ki < 0
+                        ? 0
+                        : i + ki >= height
+                            ? height - 1
+                            : i + ki;
+                acc += buffer[ci * width + j] * ver_m[ki + radius];
+            }
+            acc = abs(acc);
+            output[i * width + j] = acc;
+            sum += acc;
+        }
+    }
+
+    return sum;
+}
+
+CY_SECTION(".cy_itcm")
+NO_INLINE void sobel_edge_detection(
+    const int height,
+    const int width,
+    uint8_t * restrict input,
+    uint8_t output[height * width],
+    int16_t G_x[height * width],
+    int16_t G_y[height * width],
+    int16_t buffer[height * width]
+) {
+    const int SUMX = separable_sobel_kernel(height, width, input, G_x, true, buffer);
+    const int SUMY = separable_sobel_kernel(height, width, input, G_y, false, buffer);
+
+    const int threshold = (SUMX + SUMY) / (2 * height * width);
+
+    const int16x8_t v16x255 = vdupq_n_s16(255);
+    const int16x8_t v16x0 = vdupq_n_s16(0);
+    const int16x8_t v16xthreshold = vdupq_n_s16((int16_t)threshold);
+
+    for (int i = 0; i < height; i++) {
+        int j = 0;
+        for (; j <= width - 8; j += 8) {
+            int16x8_t mag = vaddq_s16(
+                vldrhq_s16(&G_x[i * width + j]),
+                vldrhq_s16(&G_y[i * width + j])
+            );
+            mag = vminq_s16(mag, v16x255);
+            mag = vpselq_s16(mag, v16x0, vcmpgeq_s16(mag, v16xthreshold));
+            vstrbq_u16(&output[i * width + j], vreinterpretq_u16_s16(mag));
+        }
+        for (; j < width; j++) {
+            const int16_t mag = G_x[i * width + j] + G_y[i * width + j];
             output[i * width + j] = (uint8_t)(
-                mag > 255.f
-                    ? 255.f
-                    : mag < THRESHOLD
-                        ? 0.f
+                mag > 255 
+                    ? 255 
+                    : mag < threshold 
+                        ? 0 
                         : mag
-                );
+            );
         }
     }
 }
