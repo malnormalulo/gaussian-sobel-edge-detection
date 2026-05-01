@@ -7,6 +7,10 @@
  */
 #define NO_INLINE  __attribute__ ((noinline))
 
+#define HEIGHT 128
+#define WIDTH 128
+#define SIZE (HEIGHT * WIDTH)
+
 
 // sobel params
 #define SED_KERNEL_SIZE 3
