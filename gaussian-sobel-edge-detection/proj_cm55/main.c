@@ -13,36 +13,40 @@
 #include "core.h"
 
 
-void print_summary(const char * fname, 
-    const uint8_t * actual, 
-    const uint8_t * expected, 
-    size_t size, 
+void print_summary(const char * fname,
+    const uint8_t * actual,
+    const uint8_t * expected,
+    size_t size,
     float mac,
     perf_result_t metrics)
 {
-    char check_output[256];
-    int error = 0;
+    int max_err = 0, n_within = 0, n_exact = 0;
+    long sum_err = 0;
 
     for (size_t i = 0; i < size; i++) {
-        if ((int)actual[i] > (int)expected[i*3] + 4 || (int)actual[i] < (int)expected[i*3] - 4)
-            error++;
+        const int d = (int)actual[i] - (int)expected[i*3];
+        const int ad = d < 0 ? -d : d;
+        if (ad > max_err) max_err = ad;
+        sum_err += ad;
+        if (ad == 0) n_exact++;
+        if (ad <= 4) n_within++;
     }
-    if (error > 0)
-        snprintf(check_output, sizeof(check_output), "NOK, found %d erros", error);
-    else
-        snprintf(check_output, sizeof(check_output), "OK");
-
+    const float mean_err  = (float)sum_err  / (float)size;
+    const float pct_exact = 100.f * (float)n_exact  / (float)size;
+    const float pct_within = 100.f * (float)n_within / (float)size;
 
     printf("%s: cycles = %7lu,\t instr = %6lu,\t mac/cycle = %f,\t instr/mac = %f,"
-           "\t IPC = %f,\t cycles/px = %f,\t output = %s\n\n",
+           "\t IPC = %f,\t cycles/px = %f\n",
            fname,
            metrics.cycles,
            metrics.instructions,
            mac / metrics.cycles,
            metrics.instructions / mac,
            (float) metrics.instructions / metrics.cycles,
-           (float) metrics.cycles / size,
-           check_output);
+           (float) metrics.cycles / size);
+    printf("%s accuracy vs reference: max_err = %d, mean_err = %.3f, "
+           "exact = %.2f%%, within_4 = %.2f%%\n\n",
+           fname, max_err, mean_err, pct_exact, pct_within);
 }
 
 
