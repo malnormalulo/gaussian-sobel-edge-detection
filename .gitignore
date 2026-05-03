@@ -48,3 +48,4 @@ library-manager.log
 /baseline SW implementation/out_gaussian_blur.bmp
 /baseline SW implementation/out_monochrome.bmp
 /baseline SW implementation/out_sobel_edge.bmp
+__pycache__

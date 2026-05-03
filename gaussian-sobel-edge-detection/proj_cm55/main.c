@@ -49,6 +49,16 @@ void print_summary(const char * fname,
            fname, max_err, mean_err, pct_exact, pct_within);
 }
 
+void dump_buffer(const char *tag, const uint8_t *buf, size_t n) {
+    printf("===BEGIN %s %u===\n", tag, (unsigned)n);
+    for (size_t i = 0; i < n; i++) {
+        printf("%02x", buf[i]);
+        if ((i & 63u) == 63u) printf("\n");
+    }
+    if ((n & 63u) != 0u) printf("\n");
+    printf("===END %s===\n", tag);
+}
+
 
 static uint8_t actual_out_monochrome[SIZE];
 static uint8_t actual_out_gaussian_blur[SIZE];
@@ -92,6 +102,10 @@ int main(void)
     sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
     res = perf_counter_stop();
     print_summary("sobel edge", actual_out_sobel, out_sobel_edge, SIZE, mac, res);
+
+    dump_buffer("monochrome",    actual_out_monochrome,    SIZE);
+    dump_buffer("gaussian_blur", actual_out_gaussian_blur, SIZE);
+    dump_buffer("sobel_edge",    actual_out_sobel,         SIZE);
 
     // mac = SIZE*3 + GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*SIZE + SED_KERNEL_SIZE*SED_KERNEL_SIZE*SIZE;
 
