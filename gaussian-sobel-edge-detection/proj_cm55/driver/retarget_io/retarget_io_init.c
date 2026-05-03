@@ -47,7 +47,7 @@
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
-/* For the RetargetIO (Debug UART) usage. */
+/* For the RetargetIO (Debug UART) usage */
 static cy_stc_scb_uart_context_t    DEBUG_UART_context;  
 static mtb_hal_uart_t               DEBUG_UART_hal_obj;  
 
@@ -106,6 +106,7 @@ static cy_stc_syspm_callback_t retarget_io_syspm_cb =
 *  void
 *
 *******************************************************************************/
+
 void init_retarget_io(void)
 {
     cy_rslt_t result = CY_RSLT_SUCCESS;

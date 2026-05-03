@@ -19,12 +19,14 @@ VERBOSE=
 # ... then code in directories named COMPONENT_foo and COMPONENT_bar will be
 # added to the build
 #
-COMPONENTS+=
+COMPONENTS+=USBD_BASE
 
 CORE=CM55
 CORE_NAME=CM55_0
 
 # Add additional defines to the build process (without a leading -D).
+DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF OV7675_RES_QVGA
+# DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF OV7675_RES_VGA
 DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF
 DEFINES+=__PMU_PRESENT=1U __PMU_NUM_EVENTCNT=8U
 
@@ -57,5 +59,8 @@ LDLIBS+=
 
 # Path to the linker script to use (if empty, use the default linker script).
 LINKER_SCRIPT=
+
+# Exclude the local camera driver copy; the mtb_shared version (camera-dvp-ov7675 dep) compiles it.
+CY_IGNORE+=driver/ov7675/mtb_dvp_camera_ov7675.c
 
 include $(CY_TOOLS_DIR)/make/start.mk

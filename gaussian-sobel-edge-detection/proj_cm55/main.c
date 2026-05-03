@@ -1,127 +1,164 @@
 #include "cybsp.h"
-#include <arm_mve.h>
+#include "cy_pdl.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+// Access to retarget-io initialization
+// used to have printf over KitProg3
 #include "retarget_io_init.h"
-#include "perf_counter.h"
 
-#include "input.h"
-#include "out_monochrome.h"
-#include "out_gaussian_blur.h"
-#include "out_sobel_edge.h"
+// Driver of the OV7675 camera (over DVP for stream and I2C for configuration)
+#include "mtb_dvp_camera_ov7675.h"
 
-// #include "core_naive.h"
-#include "core.h"
+// Driver for USBD support (using emUSB from Seeger)
+#include "driver/usbd/usbd.h"
 
+/**
+ * @def COM_OVERHEAD
+ * Size of the header packet (USB communication)
+ * Used for synchronization and validation
+ */
+#define COM_OVERHEAD	8
 
-void print_summary(const char * fname,
-    const uint8_t * actual,
-    const uint8_t * expected,
-    size_t size,
-    float mac,
-    perf_result_t metrics)
+/**
+ * @def COM_CMD_SIZE
+ * Size of a command from computer to PSoC Edge
+ */
+#define COM_CMD_SIZE	1
+
+/**
+ * @def COM_CMD_START_STREAM
+ * Command enabling to start the streaming of data
+ */
+#define COM_CMD_START_STREAM	49
+
+static uint8_t* image_buffer_0 = NULL;
+static uint8_t* image_buffer_1 = NULL;
+static cy_stc_scb_i2c_context_t i2c_master_context;
+static bool frame_ready = false;
+static bool active_frame = false;
+
+int camera_init(void)
 {
-    int max_err = 0, n_within = 0, n_exact = 0;
-    long sum_err = 0;
+    cy_rslt_t result;
 
-    for (size_t i = 0; i < size; i++) {
-        const int d = (int)actual[i] - (int)expected[i];
-        const int ad = d < 0 ? -d : d;
-        if (ad > max_err) max_err = ad;
-        sum_err += ad;
-        if (ad == 0) n_exact++;
-        if (ad <= 4) n_within++;
-    }
-    const float mean_err  = (float)sum_err  / (float)size;
-    const float pct_exact = 100.f * (float)n_exact  / (float)size;
-    const float pct_within = 100.f * (float)n_within / (float)size;
-
-    printf("%s: cycles = %7lu,\t instr = %6lu,\t mac/cycle = %f,\t instr/mac = %f,"
-           "\t IPC = %f,\t cycles/px = %f\n",
-           fname,
-           metrics.cycles,
-           metrics.instructions,
-           mac / metrics.cycles,
-           metrics.instructions / mac,
-           (float) metrics.instructions / metrics.cycles,
-           (float) metrics.cycles / size);
-    printf("%s accuracy vs reference: max_err = %d, mean_err = %.3f, "
-           "exact = %.2f%%, within_4 = %.2f%%\n\n",
-           fname, max_err, mean_err, pct_exact, pct_within);
-}
-
-void dump_buffer(const char *tag, const uint8_t *buf, size_t n) {
-    printf("===BEGIN %s %u===\n", tag, (unsigned)n);
-    for (size_t i = 0; i < n; i++) {
-        printf("%02x", buf[i]);
-        if ((i & 63u) == 63u) printf("\n");
-    }
-    if ((n & 63u) != 0u) printf("\n");
-    printf("===END %s===\n", tag);
-}
-
-
-CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_monochrome[SIZE];
-CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_gaussian_blur[SIZE];
-CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_sobel[SIZE];
-
-CY_SECTION(".cy_itcm")
-int main(void)
-{
-    perf_result_t res;
-    float mac;
-
-    cy_rslt_t result = cybsp_init();
-    /* Board init failed. Stop program execution */
-    if (CY_RSLT_SUCCESS != result)
-    {
-        handle_app_error();
+    /* allocated image buffers */
+    image_buffer_0 = malloc(OV7675_MEMORY_BUFFER_SIZE);
+    if (image_buffer_0 == NULL) {
+        printf("Failed to malloc image buffer 0\n");
+        return -1;
     }
 
-    init_retarget_io();
-    perf_counter_init();
-    // printf("Init finished\n");
-    // printf("SystemCoreClock: %lu Hz (%.2f MHz)\n\n", SystemCoreClock, SystemCoreClock / 1000000.0);
+    image_buffer_1 = malloc(OV7675_MEMORY_BUFFER_SIZE);
+    if (image_buffer_1 == NULL) {
+        printf("Failed to malloc image buffer 1\n");
+        return -1;
+    }
 
-    fill_gaussian_blur_kernel();
-    // print_gaussian_kernel();
+    /* Enable I2C Controller */
+    result = Cy_SCB_I2C_Init(CYBSP_I2C_CAM_CONTROLLER_HW, &CYBSP_I2C_CAM_CONTROLLER_config,
+                             &i2c_master_context);
+    if (CY_SCB_I2C_SUCCESS != result) {
+        printf("I2C init failed\n");
+        return -1;
+    }
 
-    mac = SIZE * 3;
-    perf_counter_start();
-    convert_to_monochrome(SIZE, input_image, actual_out_monochrome);
-    res = perf_counter_stop();
-    print_summary("\nmonochrome", actual_out_monochrome, out_monochrome, SIZE, mac, res);
+    Cy_SCB_I2C_Enable(CYBSP_I2C_CAM_CONTROLLER_HW);
 
-    mac = GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*SIZE;
-    perf_counter_start();
-    gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
-    res = perf_counter_stop();
-    print_summary("gaussian blur", actual_out_gaussian_blur, out_gaussian_blur, SIZE, mac, res);
-
-    mac = SED_KERNEL_SIZE*SED_KERNEL_SIZE*SIZE;
-    perf_counter_start();
-    sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
-    res = perf_counter_stop();
-    print_summary("sobel edge", actual_out_sobel, out_sobel_edge, SIZE, mac, res);
-
-    // dump_buffer("monochrome",    actual_out_monochrome,    SIZE);
-    // dump_buffer("gaussian_blur", actual_out_gaussian_blur, SIZE);
-    // dump_buffer("sobel_edge",    actual_out_sobel,         SIZE);
-
-    // mac = SIZE*3 + GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*SIZE + SED_KERNEL_SIZE*SED_KERNEL_SIZE*SIZE;
-
-    // perf_counter_start();
-    // convert_to_monochrome(SIZE, input_image, actual_out_monochrome);
-    // gaussian_blur(IN_HEIGHT, IN_WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
-    // sobel_edge_detection(IN_HEIGHT, IN_WIDTH, actual_out_gaussian_blur, actual_out_sobel);
-    // res = perf_counter_stop();
-
-    // print_summary("full sobel edge pipeline", actual_out_sobel, out_sobel_edge, SIZE, mac, res);
-    
-    while(1) {
+    /* Initialize the camera DVP OV7675 */
+    result = mtb_dvp_cam_ov7675_init(image_buffer_0, image_buffer_1, &i2c_master_context,
+                                     &frame_ready, &active_frame);
+    if (CY_RSLT_SUCCESS != result) {
+        printf("DVP camera init failed\n");
+        return -1;
     }
 
     return 0;
+}
+
+int main(void)
+{
+	uint8_t* comm_buffer = NULL;
+
+	usbd_t* usb_handle;
+
+	int send_data = 0;
+
+    cy_rslt_t result;
+
+    // Initialize the device and board peripherals
+    result = cybsp_init();
+    if (CY_RSLT_SUCCESS != result)
+    {
+        CY_ASSERT(0);
+    }
+
+    // Init retarget-io -> printf redirected to KitProg3
+	init_retarget_io();
+
+    // Enable global interrupts
+    __enable_irq();
+
+    if (camera_init() != 0) {
+        CY_ASSERT(0);
+    }
+
+	printf("PSOC EDGE OV7675 Streaming over USB v1.0\r\n");
+
+	// Allocate communication buffer
+	// We assume that the size of a picture captured by the OV7675
+	// is bigger than the size of a radar frame
+	comm_buffer = malloc(OV7675_MEMORY_BUFFER_SIZE + COM_OVERHEAD);
+	if (comm_buffer == NULL)
+	{
+		printf("Cannot allocate comm_buffer \r\n");
+		return 0;
+	}
+
+	// Init USB CDC
+	// This call will block until USB cable is plugged to a computer
+	usb_handle = usbd_create();
+
+    for (;;)
+    {
+    	uint8_t cmd = 0;
+
+    	// Something in USB read buffer?
+    	if ( usbd_read(usb_handle, &cmd, COM_CMD_SIZE) == COM_CMD_SIZE)
+    	{
+    		printf("Received command: %d \r\n", cmd);
+    		if (cmd == COM_CMD_START_STREAM)
+    		{
+    			send_data = 1;
+    		}
+    		else send_data = 0;
+    	}
+
+    	// Frame ready from the OV7675?
+		if (frame_ready)
+		{
+            uint8_t *buf = active_frame ? image_buffer_1 : image_buffer_0;
+			memcpy(&comm_buffer[COM_OVERHEAD], buf, OV7675_MEMORY_BUFFER_SIZE);
+
+			frame_ready = false;
+
+			// Add overhead
+			comm_buffer[0] = 0xf8;
+			comm_buffer[1] = 0x1f;
+			comm_buffer[2] = 0xf8;
+			comm_buffer[3] = 0x1f;
+			*((uint32_t*)&comm_buffer[4]) = OV7675_MEMORY_BUFFER_SIZE;
+
+			// Send per USB
+			if (send_data == 1)
+			{
+				if (usbd_write(usb_handle, comm_buffer, OV7675_MEMORY_BUFFER_SIZE + COM_OVERHEAD) != 0)
+				{
+					printf("Failed to write OV7675 values over USB\r\n");
+					send_data = 0;
+				}
+			}
+		}
+    }
 }

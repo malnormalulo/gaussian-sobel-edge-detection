@@ -49,3 +49,4 @@ library-manager.log
 /baseline SW implementation/out_monochrome.bmp
 /baseline SW implementation/out_sobel_edge.bmp
 __pycache__
+.venv
