@@ -47,23 +47,15 @@ MAPPING = {
 
 
 def emit_header(path, name, gray_bytes, height, width, h_macro, w_macro):
-    # replicate each gray byte 3x to match the existing RGB-replicated format
-    # that print_summary's `expected[i*3]` indexing assumes.
-    rgb = bytearray(len(gray_bytes) * 3)
-    for i, b in enumerate(gray_bytes):
-        rgb[3*i] = b
-        rgb[3*i + 1] = b
-        rgb[3*i + 2] = b
-
     per_line = 16
     lines = []
-    for i in range(0, len(rgb), per_line):
-        chunk = rgb[i:i + per_line]
+    for i in range(0, len(gray_bytes), per_line):
+        chunk = gray_bytes[i:i + per_line]
         lines.append("    " + ", ".join(f"0x{b:02x}" for b in chunk) + ",")
     with open(path, "w") as f:
         f.write(f"#define {h_macro} {height}\n")
         f.write(f"#define {w_macro} {width}\n\n")
-        f.write(f"// array size is {len(rgb)}\n")
+        f.write(f"// array size is {len(gray_bytes)}\n")
         f.write(f"static const uint8_t {name}[] = {{\n")
         f.write("\n".join(lines))
         f.write("\n};\n")

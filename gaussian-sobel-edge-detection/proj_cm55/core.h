@@ -189,7 +189,9 @@ NO_INLINE void gaussian_blur(
 
 
 
+CY_SECTION(".cy_socmem_data")
 static int16_t G_x[SIZE];
+CY_SECTION(".cy_socmem_data")
 static int16_t G_y[SIZE];
 
 CY_SECTION(".cy_dtcm")

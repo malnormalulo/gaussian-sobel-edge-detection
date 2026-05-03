@@ -24,7 +24,7 @@ void print_summary(const char * fname,
     long sum_err = 0;
 
     for (size_t i = 0; i < size; i++) {
-        const int d = (int)actual[i] - (int)expected[i*3];
+        const int d = (int)actual[i] - (int)expected[i];
         const int ad = d < 0 ? -d : d;
         if (ad > max_err) max_err = ad;
         sum_err += ad;
@@ -60,8 +60,11 @@ void dump_buffer(const char *tag, const uint8_t *buf, size_t n) {
 }
 
 
+CY_SECTION(".cy_socmem_data")
 static uint8_t actual_out_monochrome[SIZE];
+CY_SECTION(".cy_socmem_data")
 static uint8_t actual_out_gaussian_blur[SIZE];
+CY_SECTION(".cy_socmem_data")
 static uint8_t actual_out_sobel[SIZE];
 
 CY_SECTION(".cy_itcm")
@@ -103,9 +106,9 @@ int main(void)
     res = perf_counter_stop();
     print_summary("sobel edge", actual_out_sobel, out_sobel_edge, SIZE, mac, res);
 
-    dump_buffer("monochrome",    actual_out_monochrome,    SIZE);
-    dump_buffer("gaussian_blur", actual_out_gaussian_blur, SIZE);
-    dump_buffer("sobel_edge",    actual_out_sobel,         SIZE);
+    // dump_buffer("monochrome",    actual_out_monochrome,    SIZE);
+    // dump_buffer("gaussian_blur", actual_out_gaussian_blur, SIZE);
+    // dump_buffer("sobel_edge",    actual_out_sobel,         SIZE);
 
     // mac = SIZE*3 + GBLUR_KERNEL_SIZE*GBLUR_KERNEL_SIZE*SIZE + SED_KERNEL_SIZE*SED_KERNEL_SIZE*SIZE;
 

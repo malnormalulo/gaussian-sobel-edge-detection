@@ -145,10 +145,6 @@ def sobel(img):
     return mag.astype(np.uint8)
 
 
-def gray_to_rgb_bytes(gray):
-    return np.repeat(gray.reshape(-1)[:, None], 3, axis=1).reshape(-1).tolist()
-
-
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -185,20 +181,20 @@ def main():
     print("running naive pipeline...")
     mono = to_monochrome(rgb)
     emit_header(os.path.join(args.out_dir, "out_monochrome.h"),
-                "out_monochrome", gray_to_rgb_bytes(mono), h, w,
+                "out_monochrome", mono.reshape(-1).tolist(), h, w,
                 "OUT_MONOCHROME_HEIGHT", "OUT_MONOCHROME_WIDTH")
     print("  wrote out_monochrome.h")
 
     k = gaussian_kernel(GBLUR_KSIZE, SIGMA)
     blur = gaussian_blur(mono, k)
     emit_header(os.path.join(args.out_dir, "out_gaussian_blur.h"),
-                "out_gaussian_blur", gray_to_rgb_bytes(blur), h, w,
+                "out_gaussian_blur", blur.reshape(-1).tolist(), h, w,
                 "OUT_GAUSSIAN_BLUR_HEIGHT", "OUT_GAUSSIAN_BLUR_WIDTH")
     print("  wrote out_gaussian_blur.h")
 
     edge = sobel(blur)
     emit_header(os.path.join(args.out_dir, "out_sobel_edge.h"),
-                "out_sobel_edge", gray_to_rgb_bytes(edge), h, w,
+                "out_sobel_edge", edge.reshape(-1).tolist(), h, w,
                 "OUT_SOBEL_EDGE_HEIGHT", "OUT_SOBEL_EDGE_WIDTH")
     print("  wrote out_sobel_edge.h")
 

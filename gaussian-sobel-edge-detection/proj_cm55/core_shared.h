@@ -7,8 +7,8 @@
  */
 #define NO_INLINE  __attribute__ ((noinline))
 
-#define HEIGHT 128
-#define WIDTH 128
+#define HEIGHT 240
+#define WIDTH 320
 #define SIZE (HEIGHT * WIDTH)
 
 
