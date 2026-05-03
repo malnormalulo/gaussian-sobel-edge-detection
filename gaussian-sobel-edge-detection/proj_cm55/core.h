@@ -333,14 +333,12 @@ NO_INLINE void sobel_edge_detection(
     const uint8_t * restrict input,
     uint8_t *output
 ) {
-    const int SUMX = separable_sobel_kernel(height, width, input, G_x, true);
-    const int SUMY = separable_sobel_kernel(height, width, input, G_y, false);
-
-    const int threshold = (SUMX + SUMY) / (2 * height * width);
+    separable_sobel_kernel(height, width, input, G_x, true);
+    separable_sobel_kernel(height, width, input, G_y, false);
 
     const int16x8_t v16x255 = vdupq_n_s16(255);
     const int16x8_t v16x0 = vdupq_n_s16(0);
-    const int16x8_t v16xthreshold = vdupq_n_s16((int16_t)threshold);
+    const int16x8_t v16xthreshold = vdupq_n_s16((int16_t)THRESHOLD);
 
     for (int i = 0; i < height; i++) {
         int j = 0;
@@ -358,7 +356,7 @@ NO_INLINE void sobel_edge_detection(
             output[i * width + j] = (uint8_t)(
                 mag > 255 
                     ? 255 
-                    : mag < threshold 
+                    : mag < THRESHOLD 
                         ? 0 
                         : mag
             );

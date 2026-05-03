@@ -14,6 +14,7 @@
 
 // sobel params
 #define SED_KERNEL_SIZE 3
+#define THRESHOLD 25
 
 // gaussian blur params
 #define SIGMA 1
