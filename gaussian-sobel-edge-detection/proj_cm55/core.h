@@ -31,15 +31,43 @@ NO_INLINE void convert_rgb565_to_mono_rgb888(
     const uint8_t *restrict in_image,
     uint8_t *out_image
 ) {
-    for(int i = 0; i < size; i++) {
-        uint16_t pixel = ((uint16_t)in_image[i*2+1] << 8) | in_image[i*2];
-        uint16_t r, g, b;
-        
-        r = ((pixel & 0b1111100000000000) >> 11) * 255/31 * 77;
-        g = ((pixel & 0b0000011111100000) >> 5) * 255/63 * 151;
-        b = ( pixel & 0b0000000000011111) * 255/31 * 28;
+    uint32_t block_count = size / 8;
+    uint32_t tail_count = size % 8;
 
-        out_image[i] = (uint8_t)((r + g + b) >> 8);
+    const uint16x8_t v_mask_g = vdupq_n_u16(0b0000000000111111);
+    const uint16x8_t v_mask_b = vdupq_n_u16(0b0000000000011111);
+
+    while (block_count > 0) {
+        uint16x8_t pixels = vldrhq_u16((const uint16_t *)in_image);
+        uint16x8_t r5 = vshrq_n_u16(pixels, 11);                    // 11111_xxxxxx_xxxxx -> 00000000000_11111
+        uint16x8_t g6 = vandq_u16(vshrq_n_u16(pixels, 5), v_mask_g);// xxxxx_111111_xxxxx -> 0000000000_111111
+        uint16x8_t b5 = vandq_u16(pixels, v_mask_b);                // xxxxx_xxxxxx_11111 -> 00000000000_11111
+
+        // ">> 3" = *8 (for 5-bit) ->
+        uint16x8_t y = vmulq_n_u16(r5, 616); // 77 *8=616
+        y = vmlaq_n_u16(y, g6, 604);         // 151*4=604 - green was alredy 6-bit
+        y = vmlaq_n_u16(y, b5, 224);         // 28 *8=224
+
+        vstrbq_u16(out_image, vshrq_n_u16(y, 8));
+
+        in_image += 8 * 2;
+        out_image += 8;
+        block_count--;
+    }
+
+    if (tail_count > 0) {
+        const mve_pred16_t p = vctp16q(tail_count);
+
+        uint16x8_t pixels = vldrhq_z_u16((const uint16_t *)in_image, p);
+        uint16x8_t r5 = vshrq_n_u16(pixels, 11);
+        uint16x8_t g6 = vandq_u16(vshrq_n_u16(pixels, 5), v_mask_g);
+        uint16x8_t b5 = vandq_u16(pixels, v_mask_b);
+
+        uint16x8_t y = vmulq_n_u16(r5, 616);
+        y = vmlaq_n_u16(y, g6, 604);
+        y = vmlaq_n_u16(y, b5, 224);
+
+        vstrbq_p_u16(out_image, vshrq_n_u16(y, 8), p);
     }
 }
 
