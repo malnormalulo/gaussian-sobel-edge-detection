@@ -336,15 +336,49 @@ NO_INLINE void sobel_edge_detection(
 
 CY_SECTION(".cy_itcm")
 NO_INLINE void mono_rgb888_to_rgb565(
-    const int size,
-    uint8_t *input,
-    uint8_t *output
+    const size_t size,
+    const uint8_t *restrict in_image,
+    uint8_t *out_image
 ) {
-    for(int i = 0; i < size; i++){
-        uint16_t val =  ((input[i] & 0b11111000) << 8) |
-                        ((input[i] & 0b11111100) << 3)  |
-                        ((input[i] & 0b11111000) >> 3);
-        output[i*2]   = val & 0xFF;
-        output[i*2+1] = val >> 8;
+    uint32_t block_count = size / 8;
+    uint32_t tail_count = size % 8;
+
+    uint16_t *out16 = (uint16_t *)out_image;
+
+    while (block_count > 0) {
+        uint16x8_t y = vldrbq_u16(in_image);
+
+        uint16x8_t r5 = vshrq_n_u16(y, 3);
+        uint16x8_t g6 = vshrq_n_u16(y, 2);
+        uint16x8_t b5 = vshrq_n_u16(y, 3);
+
+        uint16x8_t rgb = vorrq_u16(
+            vorrq_u16(
+                vshlq_n_u16(r5, 11), 
+                vshlq_n_u16(g6, 5)), 
+                            b5);
+
+        vstrhq_u16(out16, rgb);
+        
+        in_image += 8;
+        out16 += 8;
+        block_count--;
+    }
+
+    if (tail_count > 0) {
+        const mve_pred16_t p = vctp16q(tail_count);
+        uint16x8_t y = vldrbq_z_u16(in_image, p);
+
+        uint16x8_t r5 = vshrq_n_u16(y, 3);
+        uint16x8_t g6 = vshrq_n_u16(y, 2);
+        uint16x8_t b5 = vshrq_n_u16(y, 3);
+
+        uint16x8_t rgb = vorrq_u16(
+            vorrq_u16(
+                vshlq_n_u16(r5, 11), 
+                vshlq_n_u16(g6, 5)), 
+                            b5);
+
+        vstrhq_p_u16(out16, rgb, p);
     }
 }
