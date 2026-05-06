@@ -8,11 +8,11 @@
 // used to have printf over KitProg3
 #include "retarget_io_init.h"
 
-// Driver of the OV7675 camera (over DVP for stream and I2C for configuration)
-#include "mtb_dvp_camera_ov7675.h"
-
 // Driver for USBD support (using emUSB from Seeger)
 #include "driver/usbd/usbd.h"
+
+// Core logic
+#include "core.h"
 
 /**
  * @def COM_OVERHEAD
@@ -57,8 +57,7 @@ int camera_init(void)
     }
 
     /* Enable I2C Controller */
-    result = Cy_SCB_I2C_Init(CYBSP_I2C_CAM_CONTROLLER_HW, &CYBSP_I2C_CAM_CONTROLLER_config,
-                             &i2c_master_context);
+    result = Cy_SCB_I2C_Init(CYBSP_I2C_CAM_CONTROLLER_HW, &CYBSP_I2C_CAM_CONTROLLER_config, &i2c_master_context);
     if (CY_SCB_I2C_SUCCESS != result) {
         printf("I2C init failed\n");
         return -1;
@@ -96,6 +95,9 @@ int main(void)
 
     // Init retarget-io -> printf redirected to KitProg3
 	init_retarget_io();
+
+	// Filling gaussian kernel - only one time
+    // fill_gaussian_blur_kernel();
 
     // Enable global interrupts
     __enable_irq();
@@ -140,6 +142,10 @@ int main(void)
 		{
             uint8_t *buf = active_frame ? image_buffer_1 : image_buffer_0;
 			memcpy(&comm_buffer[COM_OVERHEAD], buf, OV7675_MEMORY_BUFFER_SIZE);
+			
+			// convert_to_monochrome(SIZE, input_image, actual_out_monochrome);
+			// gaussian_blur(HEIGHT, WIDTH, actual_out_monochrome, actual_out_gaussian_blur);
+			// sobel_edge_detection(HEIGHT, WIDTH, actual_out_gaussian_blur, actual_out_sobel);
 
 			frame_ready = false;
 
