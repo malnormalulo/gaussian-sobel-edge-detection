@@ -25,8 +25,8 @@
 
 
 CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_monochrome[SIZE];
+static uint8_t out_monochrome[SIZE];
 CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_gaussian_blur[SIZE];
+static uint8_t out_gaussian_blur[SIZE];
 CY_SECTION(".cy_socmem_data")
-static uint8_t actual_out_sobel[SIZE];
+static uint8_t out_sobel[SIZE];

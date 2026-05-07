@@ -97,7 +97,7 @@ int main(void)
 	init_retarget_io();
 
 	// Filling gaussian kernel - only one time
-    // fill_gaussian_blur_kernel();
+    fill_gaussian_blur_kernel();
 
     // Enable global interrupts
     __enable_irq();
@@ -143,10 +143,9 @@ int main(void)
             uint8_t *buf = active_frame ? image_buffer_1 : image_buffer_0;
 			
 			convert_rgb565_to_mono_rgb888(SIZE, buf, out_monochrome);
-			// gaussian_blur(HEIGHT, WIDTH, out_monochrome, out_gaussian_blur);
-			// sobel_edge_detection(HEIGHT, WIDTH, out_gaussian_blur, out_sobel);
-			// mono_rgb888_to_rgb565(SIZE, out_sobel, &comm_buffer[COM_OVERHEAD]);
-			mono_rgb888_to_rgb565(SIZE, out_monochrome, &comm_buffer[COM_OVERHEAD]);
+			gaussian_blur(HEIGHT, WIDTH, out_monochrome, out_gaussian_blur);
+			sobel_edge_detection(HEIGHT, WIDTH, out_gaussian_blur, out_sobel);
+			mono_rgb888_to_rgb565(SIZE, out_sobel, &comm_buffer[COM_OVERHEAD]);
 
 			frame_ready = false;
 
