@@ -20,7 +20,7 @@
 #define SED_KERNEL_SIZE 3
 
 // gaussian blur params
-#define SIGMA 1
+#define SIGMA 0.6
 #define GBLUR_KERNEL_SIZE 3 //(int)(2 * round(SIGMA) + 1)
 
 
