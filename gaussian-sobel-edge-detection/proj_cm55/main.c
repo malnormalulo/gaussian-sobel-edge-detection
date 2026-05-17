@@ -142,10 +142,10 @@ int main(void)
 		{
             uint8_t *buf = active_frame ? image_buffer_1 : image_buffer_0;
 			
-			convert_rgb565_to_mono_rgb888(SIZE, buf, out_monochrome);
-			gaussian_blur(HEIGHT, WIDTH, out_monochrome, out_gaussian_blur);
-			sobel_edge_detection(HEIGHT, WIDTH, out_gaussian_blur, out_sobel);
-			mono_rgb888_to_rgb565(SIZE, out_sobel, &comm_buffer[COM_OVERHEAD]);
+			convert_rgb565_to_mono_rgb888(SIZE, buf, &comm_buffer[COM_OVERHEAD]);
+			gaussian_blur(HEIGHT, WIDTH, &comm_buffer[COM_OVERHEAD], buf);
+			sobel_edge_detection(HEIGHT, WIDTH, buf, shared_buffer);
+			mono_rgb888_to_rgb565(SIZE, shared_buffer, &comm_buffer[COM_OVERHEAD]);
 
 			frame_ready = false;
 

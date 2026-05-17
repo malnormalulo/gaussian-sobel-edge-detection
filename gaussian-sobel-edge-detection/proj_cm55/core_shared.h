@@ -20,13 +20,9 @@
 #define SED_KERNEL_SIZE 3
 
 // gaussian blur params
-#define SIGMA 1
-#define GBLUR_KERNEL_SIZE 3 //(int)(2 * round(SIGMA) + 1)
+#define SIGMA 2
+#define GBLUR_KERNEL_SIZE 5 //(int)(2 * round(SIGMA) + 1)
 
 
-CY_SECTION(".cy_socmem_data")
-static uint8_t out_monochrome[SIZE];
-CY_SECTION(".cy_socmem_data")
-static uint8_t out_gaussian_blur[SIZE];
-CY_SECTION(".cy_socmem_data")
-static uint8_t out_sobel[SIZE];
+CY_SECTION(".cy_socmem_bss")
+static uint8_t shared_buffer[SIZE];
