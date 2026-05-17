@@ -13,6 +13,7 @@
 
 // Core logic
 #include "core.h"
+#include "perf_counter.h"
 
 /**
  * @def COM_OVERHEAD
@@ -38,6 +39,12 @@ static uint8_t* image_buffer_1 = NULL;
 static cy_stc_scb_i2c_context_t i2c_master_context;
 static bool frame_ready = false;
 static bool active_frame = false;
+
+static void print_perf(const char *fname, float mac, size_t size, perf_result_t m) {
+    printf("%s: cycles=%lu, instr=%lu, mac/cycle=%.3f, IPC=%.3f, cycles/px=%.3f\n",
+           fname, (unsigned long)m.cycles, (unsigned long)m.instructions,
+           mac / m.cycles, (float)m.instructions / m.cycles, (float)m.cycles / size);
+}
 
 int camera_init(void)
 {
@@ -98,6 +105,7 @@ int main(void)
 
 	// Filling gaussian kernel - only one time
     fill_gaussian_blur_kernel();
+    perf_counter_init();
 
     // Enable global interrupts
     __enable_irq();
@@ -141,11 +149,27 @@ int main(void)
 		if (frame_ready)
 		{
             uint8_t *buf = active_frame ? image_buffer_1 : image_buffer_0;
-			
-			convert_rgb565_to_mono_rgb888(SIZE, buf, &comm_buffer[COM_OVERHEAD]);
-			gaussian_blur(HEIGHT, WIDTH, &comm_buffer[COM_OVERHEAD], buf);
-			sobel_edge_detection(HEIGHT, WIDTH, buf, shared_buffer);
-			mono_rgb888_to_rgb565(SIZE, shared_buffer, &comm_buffer[COM_OVERHEAD]);
+            perf_result_t res;
+
+            perf_counter_start();
+            convert_rgb565_to_mono_rgb888(SIZE, buf, &comm_buffer[COM_OVERHEAD]);
+            res = perf_counter_stop();
+            print_perf("rgb565_to_mono", SIZE * 3.f, SIZE, res);
+
+            perf_counter_start();
+            gaussian_blur(HEIGHT, WIDTH, &comm_buffer[COM_OVERHEAD], buf);
+            res = perf_counter_stop();
+            print_perf("gaussian_blur", GBLUR_KERNEL_SIZE * GBLUR_KERNEL_SIZE * (float)SIZE, SIZE, res);
+
+            perf_counter_start();
+            sobel_edge_detection(HEIGHT, WIDTH, buf, shared_buffer);
+            res = perf_counter_stop();
+            print_perf("sobel_edge", SED_KERNEL_SIZE * SED_KERNEL_SIZE * (float)SIZE, SIZE, res);
+
+            perf_counter_start();
+            mono_rgb888_to_rgb565(SIZE, shared_buffer, &comm_buffer[COM_OVERHEAD]);
+            res = perf_counter_stop();
+            print_perf("mono_to_rgb565", SIZE * 3.f, SIZE, res);
 
 			frame_ready = false;
 
