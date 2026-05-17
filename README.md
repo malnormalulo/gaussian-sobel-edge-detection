@@ -43,9 +43,9 @@ Key MCU-specific details:
 
 `cycles`, `instructions`, `MAC/cycle`, `IPC`, `cycles/pixel` — measured via the PMU-based `perf_counter`.
 
-## Branch: `camera-module-setup`
+## Branch: `camera-320x240`
 
-Extends the pipeline to run live on an **OV7675 camera module**, replacing the static test image with a continuous capture loop.
+Extends the pipeline to run live on an **OV7675 camera module** at QVGA (320×240), replacing the static test image with a continuous capture loop.
 
 ### What changes
 
@@ -58,7 +58,13 @@ Extends the pipeline to run live on an **OV7675 camera module**, replacing the s
 capture frame (RGB565) → RGB565→mono → gaussian blur → sobel → mono→RGB565 → output
 ```
 
-**Resolution** — commit `5f83011` switches from QVGA (320×240) to **VGA (640×480)** by enabling `OV7675_RES_VGA` in the Makefile. The Gaussian kernel is widened accordingly (SIGMA 1→2, kernel 3→5).
+## Branch: `camera-640x480`
+
+Builds on `camera-320x240` and switches to **VGA (640×480)** resolution.
+
+### What changes
+
+**Resolution** — enables `OV7675_RES_VGA` in the Makefile.
 
 **Memory layout** — at 640×480 the image buffers no longer fit in DTCM, so:
 - Intermediate pipeline buffers (`out_monochrome`, `out_gaussian_blur`, `out_sobel`) are consolidated into a single `shared_buffer` in `.cy_socmem_bss`
