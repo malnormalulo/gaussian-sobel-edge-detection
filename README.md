@@ -2,6 +2,11 @@
 
 Image processing pipeline accelerated with ARM Helium (MVE) vector intrinsics on an Infineon PSOC Edge E84 MCU (Cortex-M55).
 
+## Project resources
+
+- [Measurements spreadsheet](https://docs.google.com/spreadsheets/d/15B9TwzGDYK0UDFhL5Y4KzxaFexD7pL9Rl35Dv9kaYpE/edit?usp=sharing)
+- [Presentation](https://docs.google.com/presentation/d/1dW5tkXFatpYTeM5DWb9MhQA8gky8OK6Jrd3j4uo-epM/edit?usp=sharing)
+
 ## Pipeline
 
 RGB image → **monochrome** → **Gaussian blur** → **Sobel edge detection** → binary edge map
